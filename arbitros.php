@@ -1,14 +1,10 @@
 
 <?php
-session_start();
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    include("basedatos.php");
-}
+$conexion = new mysqli("db-fde-02.apollopanel.com:3306", "u136076_tCDay64NMd", "AzlYnjAiSFN!d=ZtajgQa=q.", "s136076_Aribatraje");
 
 if ($conexion->connect_error) {
     die("Error de conexión: " . $conexion->connect_error);
 }
-
 // ----------------------
 // 2. REGISTRAR ÁRBITRO
 // ----------------------
@@ -121,9 +117,6 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
             </ul>
         </nav>
     </header>
-    <div class="subtitulo">
-        <h1>ARBITROS</h1>
-    </div>
 
     <div class="subtitulo">
     <h1>ARBITROS</h1>
@@ -140,7 +133,7 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
         <input type="text" name="nombre" placeholder="Nombre" required>
         <input type="text" name="apellido" placeholder="Apellido" required>
         <input type="text" name="cedula" placeholder="Cédula" required>
-        <input type="email" name="correo" placeholder="Correo" required>
+        <input type="email" name="correo" placeholder="Correo">
         <input type="text" name="telefono" placeholder="Teléfono" required>
 
         <button type="submit" name="registrar" 
