@@ -46,7 +46,7 @@ if (isset($_POST['editar'])) {
 // ----------------------
 // 5. CONSULTAR ÁRBITROS
 // ----------------------
-$arbitros = $conexion->query("SELECT * FROM arbitro ORDER BY idArbitro DESC");
+$arbitros = $conexion->query("SELECT * FROM arbitro ORDER BY idArbitro ASC");
 ?>
 
 
@@ -59,33 +59,7 @@ $arbitros = $conexion->query("SELECT * FROM arbitro ORDER BY idArbitro DESC");
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
-<!-- MODAL EDITAR -->
-<div id="modalEditar" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-     background:rgba(0,0,0,0.4); justify-content:center; align-items:center;">
 
-    <div style="background:#fff; padding:20px; border-radius:15px; width:400px;">
-        <h2 style="text-align:center;">Editar Árbitro</h2>
-
-        <form method="POST">
-            <input type="hidden" name="id" id="edit_id">
-
-            <input type="text" id="edit_nombre" name="nombre" placeholder="Nombre" style="width:100%; margin:5px 0;">
-            <input type="text" id="edit_apellido" name="apellido" placeholder="Apellido" style="width:100%; margin:5px 0;">
-            <input type="text" id="edit_cedula" name="cedula" placeholder="Cédula" style="width:100%; margin:5px 0;">
-            <input type="email" id="edit_correo" name="correo" placeholder="Correo" style="width:100%; margin:5px 0;">
-            <input type="text" id="edit_telefono" name="telefono" placeholder="Teléfono" style="width:100%; margin:5px 0;">
-
-            <button name="editar" style="width:100%; margin-top:10px; padding:10px; background:#0096C7; color:#fff; border:none; border-radius:10px;">
-                Guardar Cambios
-            </button>
-        </form>
-
-        <button onclick="document.getElementById('modalEditar').style.display='none'"
-            style="margin-top:10px; width:100%; padding:10px; background:#d32f2f; color:#fff; border:none; border-radius:10px;">
-            Cancelar
-        </button>
-    </div>
-</div>
 
 <script>
 function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
@@ -179,4 +153,31 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
     
     
 </body>
+<!-- MODAL EDITAR -->
+<div id="modalEditar" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.4); justify-content:center; align-items:center;">
+
+    <div style="background:#fff; padding:20px; border-radius:15px; width:400px;">
+        <h2 style="text-align:center;">Editar Árbitro</h2>
+
+        <form method="POST">
+            <input type="hidden" name="id" id="edit_id">
+
+            <input type="text" id="edit_nombre" name="nombre" placeholder="Nombre" style="width:100%; margin:5px 0;">
+            <input type="text" id="edit_apellido" name="apellido" placeholder="Apellido" style="width:100%; margin:5px 0;">
+            <input type="text" id="edit_cedula" name="cedula" placeholder="Cédula" style="width:100%; margin:5px 0;">
+            <input type="email" id="edit_correo" name="correo" placeholder="Correo" style="width:100%; margin:5px 0;">
+            <input type="text" id="edit_telefono" name="telefono" placeholder="Teléfono" style="width:100%; margin:5px 0;">
+
+            <button name="editar" style="width:100%; margin-top:10px; padding:10px; background:#0096C7; color:#fff; border:none; border-radius:10px;">
+                Guardar Cambios
+            </button>
+        </form>
+
+        <button onclick="document.getElementById('modalEditar').style.display='none'"
+            style="margin-top:10px; width:100%; padding:10px; background:#d32f2f; color:#fff; border:none; border-radius:10px;">
+            Cancelar
+        </button>
+    </div>
+</div>
 </html>
