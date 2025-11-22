@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$user_id = $_POST['user'] ?? '';
 	
 	if (empty($user_id)) {
-		echo "Por favor ingrese su número de identificación";
+		echo "Escribe tu número de identificación.";
 		exit;
 	}
 	
