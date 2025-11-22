@@ -24,74 +24,22 @@
         </nav>
     </header>
 <body>
-    <!-- Calendario mostrando los torneos que tiene cada día y su faltante. -->
-     <div class="container">
-    <div id="calendar"></div>
-  </div>
-  <div id="eventModal" class="modal">
-    <div class="modal-content">
-      <h2 id="modalTitle">Agregar Evento</h2>
-      <form id="eventForm">
-        <div class="form-group">
-          <label for="teamA">Equipo A</label>
-          <input type="text" id="teamA" placeholder="Nombre del equipo A" required>
-        </div>
-        <div class="form-group">
-          <label for="teamB">Equipo B</label>
-          <input type="text" id="teamB" placeholder="Nombre del equipo B" required>
-        </div>
-        <div class="form-group">
-          <label for="eventDate">Fecha</label>
-          <input type="date" id="eventDate" required>
-        </div>
-        <div class="form-group">
-          <label for="eventTime">Hora</label>
-          <input type="time" id="eventTime" required>
-        </div>
-        <div class="form-group">
-          <label for="tournament">Torneo</label>
-          <input type="text" id="tournament" placeholder="Nombre del torneo" required>
-        </div>
-        <div class="form-group">
-          <label for="categoria">Categoría</label>
-          <input type="text" id="categoria" placeholder="Categoría del partido" required>
-        </div>
-        <div class="form-group">
-          <label for="arbitros1">Arbitro</label>
-          <input type="text" id="arbitros1" placeholder="Lugar del partido" required>
-        </div>
-        <div class="form-group">
-          <label for="arbitros2">Arbitro 2</label>
-          <input type="text" id="arbitros2" placeholder="Lugar del partido" required>
-        </div>
-        <div class="form-group">
-          <label for="arbitros3">Arbitro 3</label>
-          <input type="text" id="arbitros3" placeholder="Lugar del partido" required>
-        </div>
-        <div class="form-group">
-          <label for="arbitros4">Arbitro 4</label>
-          <input type="text" id="arbitros4" placeholder="Lugar del partido" required>
-        </div>
-        <div class="form-group">
-          <label for="cancha">Cancha</label>
-          <input type="text" id="cancha" placeholder="Lugar del partido" required>
-        </div>
-
-        <div class="form-group">
-          <label for="eventColor">Color</label>
-          <select id="eventColor" required>
-            <option value="green" id="eventCalendar">🟢 Verde</option>
-            <option value="red" id="eventCalendar">🔴 Rojo</option>
-            <option value="yellow"id="eventCalendar">🟡 Amarillo</option>
-          </select>
-        </div>
-        <div class="modal-buttons">
-          <button type="button" id="cancelEvent">Cancelar</button>
-          <button type="button" id="saveEvent">Guardar</button>
-        </div>
-      </form>
+  <div class="container">
+    <div class="header">
+      <h1>⚽ Calendario de Partidos</h1>
+      <p>Gestiona tus partidos directamente en Google Calendar</p>
     </div>
-  </div>
+
+    <div class="calendar-wrapper">
+      <div class="calendar-container">
+        <iframe src="https://calendar.google.com/calendar/embed?height=700&wkst=1&ctz=America%2FChihuahua&bgcolor=%23ffffff&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=0&mode=MONTH&src=luisgallardoramirez9%40gmail.com&color=%23039BE5" 
+                frameborder="0" 
+                scrolling="no"
+                style="border-width:0; width:100%; height:700px;">
+        </iframe>
+      </div>
+    </div>
+</body>
 <script src="assets/js/calendario.js"></script>
 </body>
 </html>
