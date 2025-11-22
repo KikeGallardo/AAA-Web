@@ -1,4 +1,60 @@
-<html lang="en">
+
+<?php
+session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    include("basedatos.php");
+}
+
+if ($conexion->connect_error) {
+    die("Error de conexión: " . $conexion->connect_error);
+}
+
+// ----------------------
+// 2. REGISTRAR ÁRBITRO
+// ----------------------
+if (isset($_POST['registrar'])) {
+    $nombre   = $_POST['nombre'];
+    $apellido = $_POST['apellido'];
+    $cedula   = $_POST['cedula'];
+    $correo   = $_POST['correo'];
+    $telefono = $_POST['telefono'];
+
+    $conexion->query("INSERT INTO arbitro (nombre, apellido, cedula, correo, telefono)
+                      VALUES ('$nombre','$apellido','$cedula','$correo','$telefono')");
+}
+
+// ----------------------
+// 3. ELIMINAR ÁRBITRO
+// ----------------------
+if (isset($_POST['eliminar'])) {
+    $id = $_POST['id'];
+    $conexion->query("DELETE FROM arbitro WHERE idArbitro = $id");
+}
+
+// ----------------------
+// 4. EDITAR ÁRBITRO
+// ----------------------
+if (isset($_POST['editar'])) {
+    $id       = $_POST['id'];
+    $nombre   = $_POST['nombre'];
+    $apellido = $_POST['apellido'];
+    $cedula   = $_POST['cedula'];
+    $correo   = $_POST['correo'];
+    $telefono = $_POST['telefono'];
+
+    $conexion->query("UPDATE arbitro 
+                      SET nombre='$nombre', apellido='$apellido', cedula='$cedula', correo='$correo', telefono='$telefono'
+                      WHERE idArbitro=$id");
+}
+
+// ----------------------
+// 5. CONSULTAR ÁRBITROS
+// ----------------------
+$arbitros = $conexion->query("SELECT * FROM arbitro ORDER BY idArbitro DESC");
+?>
+
+
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -6,6 +62,48 @@
     <link rel="stylesheet" href="assets/css/torneo.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
+
+<!-- MODAL EDITAR -->
+<div id="modalEditar" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.4); justify-content:center; align-items:center;">
+
+    <div style="background:#fff; padding:20px; border-radius:15px; width:400px;">
+        <h2 style="text-align:center;">Editar Árbitro</h2>
+
+        <form method="POST">
+            <input type="hidden" name="id" id="edit_id">
+
+            <input type="text" id="edit_nombre" name="nombre" placeholder="Nombre" style="width:100%; margin:5px 0;">
+            <input type="text" id="edit_apellido" name="apellido" placeholder="Apellido" style="width:100%; margin:5px 0;">
+            <input type="text" id="edit_cedula" name="cedula" placeholder="Cédula" style="width:100%; margin:5px 0;">
+            <input type="email" id="edit_correo" name="correo" placeholder="Correo" style="width:100%; margin:5px 0;">
+            <input type="text" id="edit_telefono" name="telefono" placeholder="Teléfono" style="width:100%; margin:5px 0;">
+
+            <button name="editar" style="width:100%; margin-top:10px; padding:10px; background:#0096C7; color:#fff; border:none; border-radius:10px;">
+                Guardar Cambios
+            </button>
+        </form>
+
+        <button onclick="document.getElementById('modalEditar').style.display='none'"
+            style="margin-top:10px; width:100%; padding:10px; background:#d32f2f; color:#fff; border:none; border-radius:10px;">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+<script>
+function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
+    document.getElementById("edit_id").value = id;
+    document.getElementById("edit_nombre").value = nombre;
+    document.getElementById("edit_apellido").value = apellido;
+    document.getElementById("edit_cedula").value = cedula;
+    document.getElementById("edit_correo").value = correo;
+    document.getElementById("edit_telefono").value = telefono;
+
+    document.getElementById("modalEditar").style.display = "flex";
+}
+</script>
+
 <body>
     <header>
         <nav class="nav_bar_upper">
@@ -26,6 +124,33 @@
     <div class="subtitulo">
         <h1>ARBITROS</h1>
     </div>
+
+    <div class="subtitulo">
+    <h1>ARBITROS</h1>
+</div>
+
+<!-- FORMULARIO PARA AGREGAR ÁRBITRO -->
+<div class="form-container" style="width:80%; margin:auto; background:#fff; padding:20px; 
+     border-radius:15px; box-shadow:0 10px 20px rgba(0,0,0,0.2);">
+
+    <h2 style="text-align:center; margin-bottom:15px;">Registrar Árbitro</h2>
+
+    <form method="POST" class="form-arbitro" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;">
+        
+        <input type="text" name="nombre" placeholder="Nombre" required>
+        <input type="text" name="apellido" placeholder="Apellido" required>
+        <input type="text" name="cedula" placeholder="Cédula" required>
+        <input type="email" name="correo" placeholder="Correo" required>
+        <input type="text" name="telefono" placeholder="Teléfono" required>
+
+        <button type="submit" name="registrar" 
+            style="grid-column: span 3; padding:10px; background:#0096C7; color:#fff; border:none; 
+                   border-radius:10px; cursor:pointer; font-size:18px;">
+            Registrar Árbitro
+        </button>
+    </form>
+</div>
+
     <table border="1" class="cuerpoTabla">
             <thead>
                 <tr>
@@ -35,19 +160,28 @@
                 </tr>
             </thead>
             <tbody id="cuerpoTabla">
-                <tr id="row-<?= $archivo['id'] ?>">
-                    <td class="botonesfile">
-                        <a class="verbtn" href="verArchivo.php?id=<?= $archivo['id']; ?>" target="_blank"><i class="material-icons">import_contacts</i></a>
-                        <form method="POST" style="display:inline;">
-                            <input type="hidden" name="id" value="<?= $archivo['id']; ?>">
-                            <button class="verelbtn" type="submit" name="eliminar_individual"><i class="material-icons">delete_sweep</i></button>
-                        </form>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="findocs" colspan="3">Fin de los documentos.</td>
-                </tr>
-            </tbody>
+    <?php while ($row = $arbitros->fetch_assoc()) { ?>
+        <tr>
+            <td>
+                <!-- BOTÓN VER (EDITAR) -->
+                <button onclick="editarArbitro(<?= $row['idArbitro'] ?>,'<?= $row['nombre'] ?>','<?= $row['apellido'] ?>','<?= $row['cedula'] ?>','<?= $row['correo'] ?>','<?= $row['telefono'] ?>')" 
+                        class="verbtn"><i class="material-icons">edit</i></button>
+
+                <!-- ELIMINAR -->
+                <form method="POST" style="display:inline;">
+                    <input type="hidden" name="id" value="<?= $row['idArbitro'] ?>">
+                    <button type="submit" name="eliminar" class="verelbtn"><i class="material-icons">delete</i></button>
+                </form>
+            </td>
+
+            <td><?= $row['idArbitro'] ?></td>
+            <td><?= $row['nombre'] . " " . $row['apellido'] ?></td>
+        </tr>
+    <?php } ?>
+
+    <tr><td colspan="3" class="findocs">Fin de los documentos.</td></tr>
+</tbody>
+
         </table>
     
     
