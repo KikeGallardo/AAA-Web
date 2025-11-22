@@ -24,22 +24,7 @@
         </nav>
     </header>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>⚽ Calendario de Partidos</h1>
-      <p>Gestiona tus partidos directamente en Google Calendar</p>
-    </div>
-
-    <div class="calendar-wrapper">
-      <div class="calendar-container">
-        <iframe src="https://calendar.google.com/calendar/embed?height=700&wkst=1&ctz=America%2FChihuahua&bgcolor=%23ffffff&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=0&mode=MONTH&src=luisgallardoramirez9%40gmail.com&color=%23039BE5" 
-                frameborder="0" 
-                scrolling="no"
-                style="border-width:0; width:100%; height:700px;">
-        </iframe>
-      </div>
-    </div>
-</body>
+      <div class="calendar-container"></div>
 <script src="assets/js/calendario.js"></script>
 </body>
 </html>
