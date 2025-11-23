@@ -39,69 +39,14 @@
         <div id="miModal" class="modal" style="display:none;">
           <div class="modal-content">
             <span id="cerrarModal" style="cursor:pointer;">X</span>
-            <h2 id="modalTitle">Información</h2>
-            <table border="1" class="cuerpoTabla">
-              <tbody id="cuerpoTabla">
-                <?php
-                  $conexion = new mysqli("db-fde-02.apollopanel.com:3306", "u136076_tCDay64NMd", "AzlYnjAiSFN!d=ZtajgQa=q.", "s136076_Aribatraje");
-                  if ($conexion->connect_error) {
-                  die("Error de conexión: " . $conexion->connect_error);
-                  }
-
-                  $partidos = $conexion->query("
-                  SELECT 
-                  p.idPartido,
-                  e1.nombreEquipo AS equipoLocal,
-                  e2.nombreEquipo AS equipoVisitante,
-                  cp.nombreCategoria AS categoriaPago,
-
-                  a1.nombre AS arbitroPrincipal,
-                  cp.pagoArbitro1 AS pagoPrincipal,
-
-                  a2.nombre AS arbitroAsistente1,
-                  cp.pagoArbitro2 AS pagoAsistente1,
-
-                  a3.nombre AS arbitroAsistente2,
-                  cp.pagoArbitro3 AS pagoAsistente2,
-
-                  a4.nombre AS arbitroCuarto,
-                  cp.pagoArbitro4 AS pagoCuarto
-
-                  FROM partido p
-                  INNER JOIN equipo e1 ON p.idEquipo1 = e1.idEquipo
-                  INNER JOIN equipo e2 ON p.idEquipo2 = e2.idEquipo
-
-                  INNER JOIN categoriaPagoArbitro cp 
-                      ON cp.nombreCategoria = p.categoriaText
-
-                  LEFT JOIN arbitro a1 ON p.idArbitro1 = a1.idArbitro
-                  LEFT JOIN arbitro a2 ON p.idArbitro2 = a2.idArbitro
-                  LEFT JOIN arbitro a3 ON p.idArbitro3 = a3.idArbitro
-                  LEFT JOIN arbitro a4 ON p.idArbitro4 = a4.idArbitro
-                  WHERE fecha BETWEEN ? AND ?;
-                  ");
-
-                while ($row = $partidos->fetch_assoc()) { ?>
-                <tr>
-                  <td><?= $row['idPartido'] ?></td>
-                  <td><?= $row['equipoLocal'] ?></td>
-                  <td><?= $row['equipoVisitante'] ?></td>
-                  <td><?= $row['categoriaPago'] ?></td>
-                  <td><?= $row['arbitroPrincipal'] ?></td>
-                  <td><?= $row['pagoPrincipal'] ?></td>
-                  <td><?= $row['arbitroAsistente1'] ?></td>
-                  <td><?= $row['pagoAsistente1'] ?></td>
-                  <td><?= $row['arbitroAsistente2'] ?></td>
-                  <td><?= $row['pagoAsistente2'] ?></td>
-                  <td><?= $row['arbitroCuarto'] ?></td>
-                  <td><?= $row['pagoCuarto'] ?></td>
-                </tr>
-                <?php } ?>
-              </tbody>
+            <h2 id="modalTitle">Información del partido</h2>
+            <table class="table">
+              <tbody id="cuerpoTabla"></tbody>
             </table>
-            <p id="anoModal"></p>
-            <h3 id="mesModal"></h3>
+
           </div>
+        </div>
+
         </div>
       </body>
     </html>
