@@ -1,7 +1,6 @@
 
 <?php
 $conexion = new mysqli("db-fde-02.apollopanel.com:3306", "u136076_tCDay64NMd", "AzlYnjAiSFN!d=ZtajgQa=q.", "s136076_Aribatraje");
-
 if ($conexion->connect_error) {
     die("Error de conexión: " . $conexion->connect_error);
 }
@@ -18,7 +17,6 @@ if (isset($_POST['registrar'])) {
     $conexion->query("INSERT INTO arbitro (nombre, apellido, cedula, correo, telefono)
                       VALUES ('$nombre','$apellido','$cedula','$correo','$telefono')");
 }
-
 // ----------------------
 // 3. ELIMINAR ÁRBITRO
 // ----------------------
@@ -26,7 +24,6 @@ if (isset($_POST['eliminar'])) {
     $id = $_POST['id'];
     $conexion->query("DELETE FROM arbitro WHERE idArbitro = $id");
 }
-
 // ----------------------
 // 4. EDITAR ÁRBITRO
 // ----------------------
@@ -43,13 +40,46 @@ if (isset($_POST['editar'])) {
                       WHERE idArbitro=$id");
 }
 
+// ------------------------------------
+// PAGINACIÓN
+// ------------------------------------
+$registrosPorPagina = 5;
+
+// Página actual
+$pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+$pagina = max($pagina, 1);
+
+// Offset
+$offset = ($pagina - 1) * $registrosPorPagina;
 // ----------------------
-// 5. CONSULTAR ÁRBITROS
+// 5. CONSULTAR ÁRBITROS (con búsqueda y límite)
 // ----------------------
-$arbitros = $conexion->query("SELECT * FROM arbitro ORDER BY idArbitro ASC");
+$busqueda = "";
+$where = "";
+
+if (isset($_GET['buscar']) && !empty($_GET['buscar'])) {
+    $busqueda = $conexion->real_escape_string($_GET['buscar']);
+
+    $where = "WHERE nombre LIKE '%$busqueda%' 
+              OR apellido LIKE '%$busqueda%'
+              OR cedula LIKE '%$busqueda%'
+              OR correo LIKE '%$busqueda%'
+              OR telefono LIKE '%$busqueda%'";
+}
+// Consultar total de registros
+$totalQuery = $conexion->query("SELECT COUNT(*) AS total FROM arbitro $where");
+$totalRegistros = $totalQuery->fetch_assoc()['total'];
+
+// Total de páginas
+$totalPaginas = ceil($totalRegistros / $registrosPorPagina);
+$arbitros = $conexion->query("
+    SELECT * FROM arbitro 
+    $where 
+    ORDER BY idArbitro DESC 
+    LIMIT $registrosPorPagina OFFSET $offset
+");
+
 ?>
-
-
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -58,9 +88,6 @@ $arbitros = $conexion->query("SELECT * FROM arbitro ORDER BY idArbitro ASC");
     <link rel="stylesheet" href="assets/css/torneo.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
-
-
-
 <script>
 function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
     document.getElementById("edit_id").value = id;
@@ -69,11 +96,9 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
     document.getElementById("edit_cedula").value = cedula;
     document.getElementById("edit_correo").value = correo;
     document.getElementById("edit_telefono").value = telefono;
-
     document.getElementById("modalEditar").style.display = "flex";
 }
 </script>
-
 <body>
     <header>
         <nav class="nav_bar_upper">
@@ -95,7 +120,6 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
     <div class="subtitulo">
     <h1>ARBITROS</h1>
 </div>
-
 <!-- FORMULARIO PARA AGREGAR ÁRBITRO -->
 <div class="form-container" style="width:80%; margin:auto; background:#fff; padding:20px; 
      border-radius:15px; box-shadow:0 10px 20px rgba(0,0,0,0.2);">
@@ -117,41 +141,111 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
         </button>
     </form>
 </div>
-
+<!-- BARRA DE BÚSQUEDA -->
+<div style="width:80%; margin:20px auto; text-align:center;">
+    <form method="GET" style="display:flex; justify-content:center; gap:10px;">
+        <input type="text" name="buscar" placeholder="Buscar árbitro..." 
+               value="<?= isset($_GET['buscar']) ? $_GET['buscar'] : '' ?>"
+               style="width:50%; padding:10px; border-radius:10px; border:1px solid #aaa;">
+        
+        <button type="submit" 
+                style="padding:10px 20px; background:#0096C7; color:#fff; border:none; border-radius:10px;">
+            Buscar
+        </button>
+    </form>
+</div>
     <table border="1" class="cuerpoTabla">
             <thead>
-                <tr>
-                    <th>Acciones<a href="?sort=nomArchivo&order=asc" class="ordenar">▲</a> <a href="?sort=nomArchivo&order=desc" class="ordenar">▼</a></th>
-                    <th>NOº<a href="?sort=fecha&order=asc" class="ordenar">▲</a> <a href="?sort=fecha&order=desc" class="ordenar">▼</a></th>
-                    <th>Nombre<a href="?sort=tamano&order=asc" class="ordenar">▲</a> <a href="?sort=tamano&order=desc" class="ordenar">▼</a></th>
-                </tr>
-            </thead>
-            <tbody id="cuerpoTabla">
+    <tr>
+        <th>Opciones</th>
+        <th>Nombre</th>
+        <th>Apellido</th>
+        <th>Cédula</th>
+        <th>Correo</th>
+        <th>Teléfono</th>
+    </tr>
+</thead>
+
+<tbody id="cuerpoTabla">
     <?php while ($row = $arbitros->fetch_assoc()) { ?>
         <tr>
-            <td>
-                <!-- BOTÓN VER (EDITAR) -->
-                <button onclick="editarArbitro(<?= $row['idArbitro'] ?>,'<?= $row['nombre'] ?>','<?= $row['apellido'] ?>','<?= $row['cedula'] ?>','<?= $row['correo'] ?>','<?= $row['telefono'] ?>')" 
-                        class="verbtn"><i class="material-icons">edit</i></button>
+            <td class="botonesfile">
+
+                <!-- EDITAR -->
+                <button onclick="editarArbitro(
+                    <?= $row['idArbitro'] ?>,
+                    '<?= $row['nombre'] ?>',
+                    '<?= $row['apellido'] ?>',
+                    '<?= $row['cedula'] ?>',
+                    '<?= $row['correo'] ?>',
+                    '<?= $row['telefono'] ?>'
+                )" 
+                class="verbtn">
+                    <i class="material-icons">edit</i>
+                </button>
 
                 <!-- ELIMINAR -->
                 <form method="POST" style="display:inline;">
                     <input type="hidden" name="id" value="<?= $row['idArbitro'] ?>">
-                    <button type="submit" name="eliminar" class="verelbtn"><i class="material-icons">delete</i></button>
+                    <button class="verelbtn" type="submit" name="eliminar">
+                        <i class="material-icons">delete</i>
+                    </button>
                 </form>
             </td>
 
-            <td><?= $row['idArbitro'] ?></td>
-            <td><?= $row['nombre'] . " " . $row['apellido'] ?></td>
+            <td><?= $row['nombre'] ?></td>
+            <td><?= $row['apellido'] ?></td>
+            <td><?= $row['cedula'] ?></td>
+            <td><?= $row['correo'] ?></td>
+            <td><?= $row['telefono'] ?></td>
         </tr>
     <?php } ?>
 
-    <tr><td colspan="3" class="findocs">Fin de los documentos.</td></tr>
+    <tr>
+        <td colspan="6" class="findocs">Fin de registros (Actualiza la página)</td>
+    </tr>
 </tbody>
 
         </table>
-    
-    
+        <!-- PAGINACIÓN -->
+<div style="width:80%; margin:20px auto; text-align:center;">
+
+    <?php if ($pagina > 1): ?>
+        <a href="?pagina=<?= $pagina - 1 ?>&buscar=<?= $busqueda ?>"
+           style="padding:10px 15px; margin:5px; background:#0096C7; color:white; border-radius:8px; text-decoration:none;">
+           ⬅ Anterior
+        </a>
+    <?php endif; ?>
+
+    <?php
+    // Mostrar solo 5 botones de página
+    $start = max(1, $pagina - 2);
+    $end = min($totalPaginas, $pagina + 2);
+
+    for ($i = $start; $i <= $end; $i++): 
+    ?>
+        <a href="?pagina=<?= $i ?>&buscar=<?= $busqueda ?>"
+           style="
+                padding:10px 15px; 
+                margin:5px; 
+                background:<?= $i == $pagina ? '#0077B6' : '#0096C7' ?>;
+                color:white; 
+                border-radius:8px; 
+                text-decoration:none;
+           ">
+           <?= $i ?>
+        </a>
+    <?php endfor; ?>
+
+    <?php if ($pagina < $totalPaginas): ?>
+        <a href="?pagina=<?= $pagina + 1 ?>&buscar=<?= $busqueda ?>"
+           style="padding:10px 15px; margin:5px; background:#0096C7; color:white; border-radius:8px; text-decoration:none;">
+           Siguiente ➡
+        </a>
+    <?php endif; ?>
+
+</div>
+
 </body>
 <!-- MODAL EDITAR -->
 <div id="modalEditar" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -162,18 +256,15 @@ function editarArbitro(id, nombre, apellido, cedula, correo, telefono) {
 
         <form method="POST">
             <input type="hidden" name="id" id="edit_id">
-
             <input type="text" id="edit_nombre" name="nombre" placeholder="Nombre" style="width:100%; margin:5px 0;">
             <input type="text" id="edit_apellido" name="apellido" placeholder="Apellido" style="width:100%; margin:5px 0;">
             <input type="text" id="edit_cedula" name="cedula" placeholder="Cédula" style="width:100%; margin:5px 0;">
             <input type="email" id="edit_correo" name="correo" placeholder="Correo" style="width:100%; margin:5px 0;">
             <input type="text" id="edit_telefono" name="telefono" placeholder="Teléfono" style="width:100%; margin:5px 0;">
-
             <button name="editar" style="width:100%; margin-top:10px; padding:10px; background:#0096C7; color:#fff; border:none; border-radius:10px;">
                 Guardar Cambios
             </button>
         </form>
-
         <button onclick="document.getElementById('modalEditar').style.display='none'"
             style="margin-top:10px; width:100%; padding:10px; background:#d32f2f; color:#fff; border:none; border-radius:10px;">
             Cancelar
