@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", function() {
   const calendarEl = document.getElementById("calendar");
 
+  
+
   // Creamos el objeto calendario con todos sus parametros
   const calendar = new FullCalendar.Calendar(calendarEl, {
       titleFormat: {
@@ -20,14 +22,37 @@ document.addEventListener("DOMContentLoaded", function() {
         
       },
       locale: 'es',
-      events: [
-      ]
+      
+      // Cargar eventos desde PHP según el rango visible
+      events: async function(info, successCallback, failureCallback) {
+      const formData = new FormData();
+      formData.append("accion", "filtrar_fechas");
+      formData.append("inicio", info.startStr);
+      formData.append("fin", info.endStr);
+
+      try {
+        const res = await fetch("consultas.php", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+        successCallback(data); // FullCalendar muestra los eventos
+      } catch (err) {
+        failureCallback(err);
+        alert(err)
+      }
+    },
   });
 
   // Se crea el calendario
   calendar.render();
 
-  
+  async function cargarUsuarios() {
+    const res = await fetch("consultas.php?accion=usuarios");
+    const data = await res.json();
+    console.log("Usuarios:", data);
+  }
 
   function abrirModal(fecha) {
       document.getElementById("anoModal").textContent = "Información: " + fecha ;
