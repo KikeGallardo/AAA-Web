@@ -1,36 +1,58 @@
-import { Calendar } from '@fullcalendar/core';
-import LocaleEs from '@fullcalendar/core/locales/es';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import listPlugin from '@fullcalendar/list';
-// opcional (si usas bundler)
-// import '@fullcalendar/core/main.css';
-// import '@fullcalendar/daygrid/main.css';
+document.addEventListener("DOMContentLoaded", function() {
+  const calendarEl = document.getElementById("calendar");
 
-document.addEventListener('DOMContentLoaded', function() {
-    const container = document.querySelector('.calendar-container');
-    if (!container) {
-        console.error('No se encontró el elemento .calendar-container en la página.');
-        return;
-    }
-
-    const calendar = new FullCalendar.Calendar(container, {
-        plugins: [ FullCalendar.dayGridPlugin, FullCalendar.interactionPlugin, FullCalendar.listPlugin ],
-        initialView: 'dayGridMonth',
-        locale: 'es',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,listWeek'
+  // Creamos el objeto calendario con todos sus parametros
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      themeSystem: "bootstrap5",
+      lang: 'es',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,listMonth, dayGridWeek'
+      },
+      dateClick: function(info) {
+        if (info.title == "undefined") {
+          info.title = "No hay nada pendiente aqui!"
+        } 
+        abrirModal(info.date)
+        
+      },
+      events: [
+        {
+          title: "Partido Final",
+          start: "2025-11-22",
+          extendedProps: {
+          department: 'BioChemistry'
+          },
+          description: 'Lecture'
         },
-        events: [
-            { id: '1', title: 'Partido: Equipo A vs Equipo B', start: '2025-11-10' },
-            { id: '2', title: 'Partido: Equipo C vs Equipo D', start: '2025-11-15' }
-        ],
-        selectable: true,
-        eventClick: (info) => console.log(info.event.title),
-        select: (info) => console.log(info)
-    });
+        {
+          title: "Partido",
+          start: "2025-11-22",
+          end: "2025-11-26"
+        }
+      ]
+  });
 
-    calendar.render();
+  // Se crea el calendario
+  calendar.render();
+
+  
+
+  function abrirModal(fecha) {
+      document.getElementById("modalDate").textContent = "Fecha seleccionada: " + fecha;
+      document.getElementById("miModal").style.display = "block";
+  }
+  
+  document.getElementById("cerrarModal").onclick = function() {
+      document.getElementById("miModal").style.display = "none";
+  };
+  
+  window.onclick = function(event) {
+      if(event.target.id === "miModal") {
+          document.getElementById("miModal").style.display = "none";
+      }
+  };
 });
+
