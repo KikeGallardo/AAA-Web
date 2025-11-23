@@ -31,13 +31,64 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         <script src="assets/js/calendario.js"></script>
         <script src='fullcalendar/lang/es.js'></script>
-
-
+        
+      </div>
         <div id="miModal" class="modal" style="display:none;">
           <div class="modal-content">
             <span id="cerrarModal" style="cursor:pointer;">X</span>
-            <h2 id="modalTitle">Fecha</h2>
-            <p id="modalDate"></p>
+            <h2 id="modalTitle">Información</h2>
+            <table border="1" class="cuerpoTabla">
+              <tbody id="cuerpoTabla">
+                <?php
+                  $conexion = new mysqli("db-fde-02.apollopanel.com:3306", "u136076_tCDay64NMd", "AzlYnjAiSFN!d=ZtajgQa=q.", "s136076_Aribatraje");
+                  if ($conexion->connect_error) {
+                  die("Error de conexión: " . $conexion->connect_error);
+                  }
+
+                  // ------------------------------------
+                  // PAGINACIÓN
+                  // ------------------------------------
+                  $registrosPorPagina = 10;
+                  $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+                  $pagina = max($pagina, 1);
+                  $offset = ($pagina - 1) * $registrosPorPagina;
+
+                  // ----------------------
+                  // 5. CONSULTAR ÁRBITROS (con búsqueda y límite)
+                  // ----------------------
+                  $busqueda = "";
+                  $where = "";
+
+                  $where = "WHERE nombre LIKE '%$busqueda%' 
+                  OR apellido LIKE '%$busqueda%'
+                  OR cedula LIKE '%$busqueda%'
+                  OR fechaNacimiento LIKE '%$busqueda%'
+                  OR correo LIKE '%$busqueda%'
+                  OR telefono LIKE '%$busqueda%'
+                  OR categoriaArbitro LIKE '%$busqueda%'";
+                  
+
+                  $arbitros = $conexion->query("
+                  SELECT * FROM arbitro 
+                  $where 
+                  ORDER BY idArbitro DESC 
+                  LIMIT $registrosPorPagina OFFSET $offset
+                  ");
+                while ($row = $arbitros->fetch_assoc()) { ?>
+                <tr>
+                  <td><?= $row['nombre'] ?></td>
+                  <td><?= $row['apellido'] ?></td>
+                  <td><?= $row['cedula'] ?></td>
+                  <td><?= $row['fechaNacimiento'] ?></td>
+                  <td><?= $row['correo'] ?></td>
+                  <td><?= $row['telefono'] ?></td>
+                  <td><?= $row['categoriaArbitro'] ?></td>
+                </tr>
+                <?php } ?>
+              </tbody>
+            </table>
+            <p id="anoModal"></p>
+            <h3 id="mesModal"></h3>
           </div>
         </div>
       </body>

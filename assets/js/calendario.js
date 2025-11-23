@@ -16,27 +16,11 @@ document.addEventListener("DOMContentLoaded", function() {
         right: 'prev,next'
       },
       dateClick: function(info) {
-        if (info.title == "undefined") {
-          info.title = "No hay nada pendiente aqui!"
-        } 
-        abrirModal(info.date)
+        abrirModal(info.date.getDate())
         
       },
       locale: 'es',
       events: [
-        {
-          title: "Partido Final",
-          start: "2025-11-22",
-          extendedProps: {
-          department: 'BioChemistry'
-          },
-          description: 'Lecture'
-        },
-        {
-          title: "Partido",
-          start: "2025-11-22",
-          end: "2025-11-26"
-        }
       ]
   });
 
@@ -46,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function() {
   
 
   function abrirModal(fecha) {
-      document.getElementById("modalDate").textContent = "Fecha seleccionada: " + fecha;
+      document.getElementById("anoModal").textContent = "Información: " + fecha ;
       document.getElementById("miModal").style.display = "block";
   }
   
