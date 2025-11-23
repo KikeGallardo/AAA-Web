@@ -3,13 +3,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Creamos el objeto calendario con todos sus parametros
   const calendar = new FullCalendar.Calendar(calendarEl, {
+      titleFormat: {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    },
       initialView: "dayGridMonth",
       themeSystem: "bootstrap5",
-      lang: 'es',
       headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,listMonth, dayGridWeek'
+        left: 'title',
+        center: '',
+        right: 'prev,next'
       },
       dateClick: function(info) {
         if (info.title == "undefined") {
@@ -18,6 +22,7 @@ document.addEventListener("DOMContentLoaded", function() {
         abrirModal(info.date)
         
       },
+      locale: 'es',
       events: [
         {
           title: "Partido Final",
