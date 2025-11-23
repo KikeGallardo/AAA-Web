@@ -84,12 +84,51 @@
     justify-content: center;
     align-items: center;
 }
+
 .modal-content {
     background: white;
     padding: 20px;
     border-radius: 10px;
+    max-width: 90%;
+    margin: 5%;
 }
+
 
 .fc-license-message {
     visibility: hidden;
+}
+
+#cerrarModal {
+    width: 1%;
+    border: 1px #000;
+}
+
+
+/* ======== TABLA ======== */
+.cuerpoTabla {
+    width: 90%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.cuerpoTabla th {
+    background: #0077b6;
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.cuerpoTabla td {
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 14px;
+    text-align: center;
+}
+
+.cuerpoTabla tr:hover {
+    background: #f1f9ff;
 }
