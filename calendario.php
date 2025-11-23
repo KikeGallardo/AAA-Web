@@ -45,44 +45,53 @@
                   die("Error de conexión: " . $conexion->connect_error);
                   }
 
-                  // ------------------------------------
-                  // PAGINACIÓN
-                  // ------------------------------------
-                  $registrosPorPagina = 10;
-                  $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
-                  $pagina = max($pagina, 1);
-                  $offset = ($pagina - 1) * $registrosPorPagina;
+                  $partidos = $conexion->query("
+                  SELECT 
+                  p.idPartido,
+                  e1.nombreEquipo AS equipoLocal,
+                  e2.nombreEquipo AS equipoVisitante,
+                  cp.nombreCategoria AS categoriaPago,
 
-                  // ----------------------
-                  // 5. CONSULTAR ÁRBITROS (con búsqueda y límite)
-                  // ----------------------
-                  $busqueda = "";
-                  $where = "";
+                  a1.nombre AS arbitroPrincipal,
+                  cp.pagoArbitro1 AS pagoPrincipal,
 
-                  $where = "WHERE nombre LIKE '%$busqueda%' 
-                  OR apellido LIKE '%$busqueda%'
-                  OR cedula LIKE '%$busqueda%'
-                  OR fechaNacimiento LIKE '%$busqueda%'
-                  OR correo LIKE '%$busqueda%'
-                  OR telefono LIKE '%$busqueda%'
-                  OR categoriaArbitro LIKE '%$busqueda%'";
-                  
+                  a2.nombre AS arbitroAsistente1,
+                  cp.pagoArbitro2 AS pagoAsistente1,
 
-                  $arbitros = $conexion->query("
-                  SELECT * FROM arbitro 
-                  $where 
-                  ORDER BY idArbitro DESC 
-                  LIMIT $registrosPorPagina OFFSET $offset
+                  a3.nombre AS arbitroAsistente2,
+                  cp.pagoArbitro3 AS pagoAsistente2,
+
+                  a4.nombre AS arbitroCuarto,
+                  cp.pagoArbitro4 AS pagoCuarto
+
+                  FROM partido p
+                  INNER JOIN equipo e1 ON p.idEquipo1 = e1.idEquipo
+                  INNER JOIN equipo e2 ON p.idEquipo2 = e2.idEquipo
+
+                  INNER JOIN categoriaPagoArbitro cp 
+                      ON cp.nombreCategoria = p.categoriaText
+
+                  LEFT JOIN arbitro a1 ON p.idArbitro1 = a1.idArbitro
+                  LEFT JOIN arbitro a2 ON p.idArbitro2 = a2.idArbitro
+                  LEFT JOIN arbitro a3 ON p.idArbitro3 = a3.idArbitro
+                  LEFT JOIN arbitro a4 ON p.idArbitro4 = a4.idArbitro
+                  WHERE fecha BETWEEN ? AND ?;
                   ");
-                while ($row = $arbitros->fetch_assoc()) { ?>
+
+                while ($row = $partidos->fetch_assoc()) { ?>
                 <tr>
-                  <td><?= $row['nombre'] ?></td>
-                  <td><?= $row['apellido'] ?></td>
-                  <td><?= $row['cedula'] ?></td>
-                  <td><?= $row['fechaNacimiento'] ?></td>
-                  <td><?= $row['correo'] ?></td>
-                  <td><?= $row['telefono'] ?></td>
-                  <td><?= $row['categoriaArbitro'] ?></td>
+                  <td><?= $row['idPartido'] ?></td>
+                  <td><?= $row['equipoLocal'] ?></td>
+                  <td><?= $row['equipoVisitante'] ?></td>
+                  <td><?= $row['categoriaPago'] ?></td>
+                  <td><?= $row['arbitroPrincipal'] ?></td>
+                  <td><?= $row['pagoPrincipal'] ?></td>
+                  <td><?= $row['arbitroAsistente1'] ?></td>
+                  <td><?= $row['pagoAsistente1'] ?></td>
+                  <td><?= $row['arbitroAsistente2'] ?></td>
+                  <td><?= $row['pagoAsistente2'] ?></td>
+                  <td><?= $row['arbitroCuarto'] ?></td>
+                  <td><?= $row['pagoCuarto'] ?></td>
                 </tr>
                 <?php } ?>
               </tbody>
