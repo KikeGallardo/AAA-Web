@@ -21,6 +21,33 @@ document.addEventListener("DOMContentLoaded", function() {
         abrirModal(info.date.getDate())
         
       },
+      eventClick: function(info) {
+        const id = info.event.id;
+
+        let formData = new FormData();
+        formData.append("accion", "obtener_partido");
+        formData.append("idPartido", id);
+
+        fetch("consultas.php", { method: "POST", body: formData })
+          .then(r => r.json())
+          .then(data => {
+            document.getElementById("cuerpoTabla").innerHTML = `
+              <tr><td>Local</td><td>${data.equipoLocal}</td></tr>
+              <tr><td>Visitante</td><td>${data.equipoVisitante}</td></tr>
+              <tr><td>Categoria</td><td>${data.categoria}</td></tr>
+              <tr><td>Arbitro Principal</td><td>${data.arbitroPrincipal}</td></tr>
+              <tr><td>Pago</td><td>$ ${data.pagoPrincipal}</td></tr>
+              <tr><td>Asistente 1</td><td>${data.arbitroAsistente1}</td></tr>
+              <tr><td>Pago</td><td>$ ${data.pagoAsistente1}</td></tr>
+              <tr><td>Asistente 2</td><td>${data.arbitroAsistente2}</td></tr>
+              <tr><td>Pago</td><td>$ ${data.pagoAsistente2}</td></tr>
+              <tr><td>Cuarto Arbitro</td><td>${data.arbitroCuarto}</td></tr>
+              <tr><td>Pago</td><td>$ ${data.pagoCuarto}</td></tr>
+            `;
+
+            document.getElementById("miModal").style.display = "block";
+          });
+        },
       locale: 'es',
       
       // Cargar eventos desde PHP según el rango visible
