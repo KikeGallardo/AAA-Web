@@ -1,73 +1,68 @@
-
-.header {
+/* =========================================
+   RESET GENERAL
+========================================= */
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    justify-content: space-around;
-    text-transform: uppercase;
 }
 
+/* =========================================
+   BODY
+========================================= */
+body {
+    background: #f3f6fb;
+    font-family: "Arial", sans-serif;
+}
+
+/* =========================================
+   NAVBAR SUPERIOR
+========================================= */
 .nav_bar_upper {
     display: flex;
     gap: 5%;
-    box-sizing: border-box;
     align-items: center;
     justify-content: center;
-    position: relative;
     text-align: center;
     background: #0096C7;
     color: #000;
     padding: 10px 15px;
-    margin-bottom: 0%;
-    box-shadow: 0 15px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 15px 10px rgba(0, 0, 0, 0.2);
 }
 
 .nav_links svg {
     width: 2.5rem;
     height: 2.5rem;
     color: #000;
-    transition: color 2s ease;
-    transition: transform 0.5s ease;
+    transition: transform .4s ease, color .4s ease;
 }
 
 .nav_links svg:hover {
     color: #fff;
     transform: scale(1.5);
-    transition: color 1s ease;
-    transition: transform 0.5s ease;
 }
 
-.nav_links li:before {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: 0;
-    left: 0;
-    background-color: #000;
-    visibility: hidden;
-    transition: all 0.3s ease-in-out;
-}
-/* ======== GENERAL ======== */
-body {
-    background: #f3f6fb;
-    font-family: "Arial", sans-serif;
-    margin: 0;
-    padding: 0;
-}
-
-/* ======== TÍTULO ======== */
-.subtitulo h1 {
+/* =========================================
+   SUBTÍTULO / TÍTULO
+========================================= */
+.subtitulo {
     text-align: center;
-    margin: 40px 0 20px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 25px;
+    width: 60%;
+    margin: 25px auto;
+    box-shadow: 0 15px 10px rgba(0,0,0,0.2);
+}
+
+.subtitulo h1 {
     font-size: 32px;
     color: #023e8a;
 }
 
-/* ======== CONTENEDOR DEL FORMULARIO ======== */
+/* =========================================
+   FORMULARIO CONTENEDOR
+========================================= */
 .form-container {
     width: 90%;
     margin: auto;
@@ -83,13 +78,14 @@ body {
     margin-bottom: 15px;
 }
 
-/* ======== FORMULARIO GRID ======== */
+/* FORMULARIO GRID */
 .form-arbitro {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
 }
 
+/* Inputs */
 .form-arbitro input,
 .form-arbitro select {
     padding: 10px;
@@ -106,7 +102,7 @@ body {
     background: #fff;
 }
 
-/* ======== BOTÓN PRINCIPAL ======== */
+/* Botón principal */
 .form-arbitro button {
     grid-column: span 3;
     padding: 12px;
@@ -122,9 +118,11 @@ body {
     background: #0077b6;
 }
 
-/* ======== BÚSQUEDA ======== */
+/* =========================================
+   BUSCADOR
+========================================= */
 .buscar-container {
-    width: 100%;
+    width: 90%;
     margin: 20px auto;
     display: flex;
     justify-content: center;
@@ -147,7 +145,9 @@ body {
     cursor: pointer;
 }
 
-/* ======== TABLA ======== */
+/* =========================================
+   TABLA
+========================================= */
 .cuerpoTabla {
     width: 90%;
     margin: 20px auto;
@@ -176,29 +176,32 @@ body {
     background: #f1f9ff;
 }
 
-/* ======== BOTONES DE ACCIÓN ======== */
+/* =========================================
+   BOTONES DE ACCIÓN
+========================================= */
 .verbtn, .verelbtn {
     border: none;
     padding: 7px;
     border-radius: 8px;
     cursor: pointer;
+    color: white;
 }
 
 .verbtn {
     background: #00b4d8;
-    color: white;
 }
 
 .verelbtn {
     background: #d62828;
-    color: white;
 }
 
 .verbtn i, .verelbtn i {
     font-size: 18px;
 }
 
-/* ======== PAGINACIÓN ======== */
+/* =========================================
+   PAGINACIÓN
+========================================= */
 .paginacion {
     width: 90%;
     margin: 25px auto;
@@ -218,7 +221,9 @@ body {
     background: #023e8a;
 }
 
-/* ======== MODAL ======== */
+/* =========================================
+   MODAL EDITAR
+========================================= */
 #modalEditar {
     display: none;
     position: fixed;
@@ -266,6 +271,60 @@ body {
     background: #d62828;
 }
 
+/* =========================================
+   BOTONES FILE
+========================================= */
 .botonesfile {
-    display: inline-flex;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    align-items: center;
 }
+
+/* ====== Botón editar ====== */
+.btn-editar {
+    background: #e0e277; /* verde vivo */
+    border: none;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: 0.2s ease;
+}
+
+.btn-editar:hover {
+    background: #a09999;
+}
+
+/* ====== Botón eliminar ====== */
+.btn-eliminar {
+    background: #E53935; /* rojo brillante */
+    border: none;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: 0.2s ease;
+}
+
+.btn-eliminar:hover {
+    background: #fa7d17;
+}
+
+/* ====== Íconos ====== */
+.btn-editar .material-icons-outlined,
+.btn-eliminar .material-icons-outlined {
+    font-size: 22px;
+    color: white;
+}
+
+/* Form eliminar inline */
+.form-eliminar {
+    margin: 0;
+    padding: 0;
+}
+

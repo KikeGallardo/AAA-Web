@@ -17,10 +17,14 @@ if (isset($_POST['registrar'])) {
     $telefono = $_POST['telefono'];
     $categoria = $_POST['categoriaArbitro'];
 
-    $conexion->query("
+    if ($conexion->query("
         INSERT INTO arbitro (nombre, apellido, cedula, fechaNacimiento, correo, telefono, categoriaArbitro)
         VALUES ('$nombre','$apellido','$cedula','$fechaNac','$correo','$telefono','$categoria')
-    ");
+    ")) {
+        echo "<script>alert('Árbitro registrado correctamente.');</script>";
+    } else {
+        echo "<script>alert('Error al registrar árbitro: ".$conexion->error."');</script>";
+    }
 }
 
 // ----------------------
@@ -28,9 +32,13 @@ if (isset($_POST['registrar'])) {
 // ----------------------
 if (isset($_POST['eliminar'])) {
     $id = $_POST['id'];
-    $conexion->query("DELETE FROM arbitro WHERE idArbitro = $id");
-}
 
+    if ($conexion->query("DELETE FROM arbitro WHERE idArbitro = $id")) {
+        echo "<script>alert('Árbitro eliminado correctamente');</script>";
+    } else {
+        echo "<script>alert('Error al eliminar: ".$conexion->error."');</script>";
+    }
+}
 // ----------------------
 // 4. EDITAR ÁRBITRO
 // ----------------------
@@ -44,14 +52,19 @@ if (isset($_POST['editar'])) {
     $telefono = $_POST['telefono'];
     $categoria = $_POST['categoriaArbitro'];
 
-    $conexion->query("
+    if ($conexion->query("
         UPDATE arbitro 
         SET nombre='$nombre', apellido='$apellido', cedula='$cedula',
             fechaNacimiento='$fechaNac', correo='$correo',
             telefono='$telefono', categoriaArbitro='$categoria'
         WHERE idArbitro=$id
-    ");
+    ")) {
+        echo "<script>alert('Datos actualizados correctamente');</script>";
+    } else {
+        echo "<script>alert('Error al actualizar: ".$conexion->error."');</script>";
+    }
 }
+
 
 // ------------------------------------
 // PAGINACIÓN
@@ -136,7 +149,7 @@ function editarArbitro(id, nombre, apellido, cedula, fechaNacimiento, correo, te
 </div>
 <!-- FORMULARIO REGISTRO -->
 <div class="form-container">
-    <h2>Registrar Árbitro</h2>
+    <h2>Registrar árbitro</h2>
     <form method="POST" class="form-arbitro">
         <input type="text" name="nombre" placeholder="Nombre" required>
         <input type="text" name="apellido" placeholder="Apellido" required>
@@ -164,7 +177,7 @@ function editarArbitro(id, nombre, apellido, cedula, fechaNacimiento, correo, te
         </select>
 
         <button type="submit" name="registrar" class="btn-registrar">
-            Registrar Árbitro
+            Registrar árbitro
         </button>
     </form>
 </div>
@@ -196,8 +209,8 @@ function editarArbitro(id, nombre, apellido, cedula, fechaNacimiento, correo, te
 <?php while ($row = $arbitros->fetch_assoc()) { ?>
 <tr>
     <td class="botonesfile">
-
-        <button onclick="editarArbitro(
+    <button 
+        onclick="editarArbitro(
             <?= $row['idArbitro'] ?>,
             '<?= $row['nombre'] ?>',
             '<?= $row['apellido'] ?>',
@@ -206,18 +219,20 @@ function editarArbitro(id, nombre, apellido, cedula, fechaNacimiento, correo, te
             '<?= $row['correo'] ?>',
             '<?= $row['telefono'] ?>',
             '<?= $row['categoriaArbitro'] ?>'
-        )" class="btn-editar">
-            <i class="material-icons">edit</i>
+        )" 
+        class="btn-editar"
+    >
+        <span class="material-icons-outlined">✏️</span>
+    </button>
+
+    <form method="POST" class="form-eliminar">
+        <input type="hidden" name="id" value="<?= $row['idArbitro'] ?>">
+        <button class="btn-eliminar" type="submit" name="eliminar">
+            <span class="material-icons-outlined">🗑️</span>
         </button>
+    </form>
+</td>
 
-        <form method="POST" class="form-eliminar">
-            <input type="hidden" name="id" value="<?= $row['idArbitro'] ?>">
-            <button class="btn-eliminar" type="submit" name="eliminar">
-                <i class="material-icons">delete</i>
-            </button>
-        </form>
-
-    </td>
     <td><?= $row['nombre'] ?></td>
     <td><?= $row['apellido'] ?></td>
     <td><?= $row['cedula'] ?></td>
@@ -293,6 +308,55 @@ for ($i = $start; $i <= $end; $i++): ?>
         </button>
     </div>
 </div>
+<script>
+// VALIDAR FORMULARIO DE REGISTRO
+document.querySelector(".form-arbitro").addEventListener("submit", function(e) {
+    let nombre = document.querySelector("input[name='nombre']").value.trim();
+    let apellido = document.querySelector("input[name='apellido']").value.trim();
+    let cedula = document.querySelector("input[name='cedula']").value.trim();
+    let telefono = document.querySelector("input[name='telefono']").value.trim();
+    let categoria = document.querySelector("select[name='categoriaArbitro']").value;
+
+    if (nombre.length < 2) {
+        alert("El nombre debe tener mínimo 2 caracteres.");
+        e.preventDefault();
+        return;
+    }
+
+    if (apellido.length < 2) {
+        alert("El apellido debe tener mínimo 2 caracteres.");
+        e.preventDefault();
+        return;
+    }
+
+    if (!/^[0-9A-Za-z\-]+$/.test(cedula)) {
+        alert("La cédula contiene caracteres inválidos.");
+        e.preventDefault();
+        return;
+    }
+
+    if (!/^[0-9]{6,9}$/.test(telefono)) {
+        alert("El teléfono debe contener solo números (6 a 9 dígitos).");
+        e.preventDefault();
+        return;
+    }
+
+    if (categoria === "") {
+        alert("Debe seleccionar una categoría.");
+        e.preventDefault();
+        return;
+    }
+});
+</script>
+<script>
+document.querySelectorAll(".form-eliminar").forEach(form => {
+    form.addEventListener("submit", function(e){
+        if (!confirm("¿Seguro que desea eliminar este árbitro?")) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
 
 </body>
 </html>
