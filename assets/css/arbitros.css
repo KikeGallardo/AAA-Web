@@ -259,8 +259,9 @@ body {
     border: none;
     margin-top: 10px;
     border-radius: 10px;
-    color: #fff;
+    color: #000000;
     cursor: pointer;
+
 }
 
 #modalEditar button[name="editar"] {
@@ -292,6 +293,7 @@ body {
     justify-content: center;
     align-items: center;
     transition: 0.2s ease;
+    border-radius: 100%;
 }
 
 .btn-editar:hover {
@@ -309,6 +311,7 @@ body {
     justify-content: center;
     align-items: center;
     transition: 0.2s ease;
+    border-radius: 100%;
 }
 
 .btn-eliminar:hover {
