@@ -1,48 +1,4 @@
 /* =========================================
-   RESET GENERAL
-========================================= */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* =========================================
-   BODY
-========================================= */
-body {
-    background: #f3f6fb;
-    font-family: "Arial", sans-serif;
-}
-
-/* =========================================
-   NAVBAR SUPERIOR
-========================================= */
-.nav_bar_upper {
-    display: flex;
-    gap: 5%;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background: #0096C7;
-    color: #000;
-    padding: 10px 15px;
-    box-shadow: 0 15px 10px rgba(0, 0, 0, 0.2);
-}
-
-.nav_links svg {
-    width: 2.5rem;
-    height: 2.5rem;
-    color: #000;
-    transition: transform .4s ease, color .4s ease;
-}
-
-.nav_links svg:hover {
-    color: #fff;
-    transform: scale(1.5);
-}
-
-/* =========================================
    SUBTÍTULO / TÍTULO
 ========================================= */
 .subtitulo {

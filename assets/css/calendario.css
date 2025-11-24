@@ -1,58 +1,7 @@
-.header {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    justify-content: space-around;
-    text-transform: uppercase;
-}
-
-.nav_bar_upper {
-    display: flex;
-    gap: 5%;
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    text-align: center;
-    background: #0096C7;
-    color: #000;
-    padding: 10px 15px;
-    margin-bottom: 0%;
-    box-shadow: 0 15px 10px rgba(0,0,0,0.2);
-}
-
-.nav_links svg {
-    width: 2.5rem;
-    height: 2.5rem;
-    color: #000;
-    transition: color 2s ease;
-    transition: transform 0.5s ease;
-}
-
-.nav_links svg:hover {
-    color: #fff;
-    transform: scale(1.5);
-    transition: color 1s ease;
-    transition: transform 0.5s ease;
-}
-
-.nav_links li:before {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: 0;
-    left: 0;
-    background-color: #000;
-    visibility: hidden;
-    transition: all 0.3s ease-in-out;
-}
-
 #calendar {
-    max-width: 900px;
+    max-width: 90%;
+    height: calc(100vh - 15%);
+    max-height: 100vh;
     margin: 40px auto;
     background: white;
     padding: 20px;
@@ -67,6 +16,20 @@
     text-transform: lowercase;
 }
 
+.fc .fc-toolbar-chunk button {
+    margin: 1%;
+}
+
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1.5em;
+}
+
+.fc-daygrid-day-frame {
+    border: 1px solid #000 !important;
+    border-radius: 5px;
+    box-shadow: 3px 2px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
 .fc-daygrid-event {
     background: #0d6efd !important;
     border: none !important;
@@ -74,7 +37,7 @@
     padding: 3px 6px;
     border-radius: 5px;
 }
-
+/* 
 .modal {
     position: fixed;
     top: 0; left: 0;
@@ -101,4 +64,91 @@
 #cerrarModal {
     width: 1%;
     border: 1px #000;
+} */
+
+/* Fondo oscuro del modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* Caja del modal */
+.modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 95%px;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  animation: fadeIn .25s ease;
+  overflow-x: auto;
+  margin: auto;
+}
+
+/* Animación suave */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Botón cerrar */
+#cerrarModal {
+  float: right;
+  font-size: 22px;
+  font-weight: bold;
+  color: #444;
+}
+#cerrarModal:hover {
+  color: #e00;
+}
+
+/* Título */
+#modalTitle {
+  margin-top: 0;
+  font-size: 26px;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #eee;
+}
+
+/* Tabla */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+/* Cabecera */
+.table thead th {
+  background: #f5f5f5;
+  padding: 10px;
+  font-weight: 600;
+  border-bottom: 2px solid #ddd;
+  white-space: nowrap;
+}
+
+/* Celdas */
+.table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Hover fila */
+.table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+/* Texto más claro para pagos */
+td.precio {
+  font-weight: bold;
+  color: #2a7;
 }

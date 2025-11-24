@@ -13,42 +13,90 @@ document.addEventListener("DOMContentLoaded", function() {
       initialView: "dayGridMonth",
       themeSystem: "bootstrap5",
       headerToolbar: {
-        left: 'title',
-        center: '',
+        left: 'title,dayGridMonth',
+        center: 'listMonth',
         right: 'prev,next'
       },
+      buttonText: {
+        today: 'Hoy',
+        month: 'Mes',
+        week: 'Semana',
+        day: 'Día',
+        listMonth: 'Torneos mensuales'
+      },
       dateClick: function(info) {
-        abrirModal(info.date.getDate())
+        abrirModal(info.date)
         
       },
+
       eventClick: function(info) {
         const id = info.event.id;
+        const fechaObj = info.event.start; // Date object
+        const fecha = fechaObj.toISOString().split("T")[0];
 
         let formData = new FormData();
-        formData.append("accion", "obtener_partido");
-        formData.append("idPartido", id);
-
+        formData.append("accion", "obtener_partidos_por_dia");
+        formData.append("fecha", fecha);
         fetch("consultas.php", { method: "POST", body: formData })
           .then(r => r.json())
           .then(data => {
-            document.getElementById("cuerpoTabla").innerHTML = `
-              <tr><td>Local</td><td>${data.equipoLocal}</td></tr>
-              <tr><td>Visitante</td><td>${data.equipoVisitante}</td></tr>
-              <tr><td>Categoria</td><td>${data.categoria}</td></tr>
-              <tr><td>Arbitro Principal</td><td>${data.arbitroPrincipal}</td></tr>
-              <tr><td>Pago</td><td>$ ${data.pagoPrincipal}</td></tr>
-              <tr><td>Asistente 1</td><td>${data.arbitroAsistente1}</td></tr>
-              <tr><td>Pago</td><td>$ ${data.pagoAsistente1}</td></tr>
-              <tr><td>Asistente 2</td><td>${data.arbitroAsistente2}</td></tr>
-              <tr><td>Pago</td><td>$ ${data.pagoAsistente2}</td></tr>
-              <tr><td>Cuarto Arbitro</td><td>${data.arbitroCuarto}</td></tr>
-              <tr><td>Pago</td><td>$ ${data.pagoCuarto}</td></tr>
-            `;
+            console.table(data)
+            let html = `
+              <table class="table" border="1" style="width:100%; text-align:left; border-collapse: collapse;">
+                <thead>
+                  <tr style="background:#eee;">
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Cancha</th>
+                    <th>Categoría</th>
+                    <th>Equipo Local</th>
+                    <th>Equipo Visitante</th>
+                    <th>Categoría Pago</th>
 
-            document.getElementById("miModal").style.display = "block";
-          });
-        },
+                    <th>Árbitro Principal</th>
+                    <th>Pago Principal</th>
+
+                    <th>Asistente 1</th>
+                    <th>Pago Asistente 1</th>
+
+                    <th>Asistente 2</th>
+                    <th>Pago Asistente 2</th>
+
+                    <th>Cuarto Árbitro</th>
+                    <th>Pago Cuarto Árbitro</th>
+                  </tr>
+                </thead>
+                <tbody>
+              `;
+            data.forEach(p => {
+              html += `
+                <tr>
+                  <td>${p.idPartido}</td>
+                  <td>${p.fecha}</td>
+                  <td>${p.hora}</td>
+                  <td>${p.canchaLugar}</td>
+                  <td>${p.categoriaText}</td>
+                  <td>${p.equipoLocal}</td>
+                  <td>${p.equipoVisitante}</td>
+                  <td>${p.categoriaPago}</td>
+                  <td>${p.arbitroPrincipal}</td>
+                  <td class="precio">$${p.pagoPrincipal}</td>
+                  <td>${p.arbitroAsistente1}</td>
+                  <td class="precio">$${p.pagoAsistente1}</td>
+                  <td>${p.arbitroAsistente2}</td>
+                  <td class="precio">$${p.pagoAsistente2}</td>
+                  <td>${p.arbitroCuarto}</td>
+                  <td class="precio">$${p.pagoCuarto}</td>
+                </tr>
+              `;
+            });
+        document.getElementById("cuerpoTabla").innerHTML = html;
+        document.getElementById("miModal").style.display = "block";
+  });
+      },
       locale: 'es',
+      dayMaxEvents: true,
       
       // Cargar eventos desde PHP según el rango visible
       events: async function(info, successCallback, failureCallback) {
@@ -56,13 +104,13 @@ document.addEventListener("DOMContentLoaded", function() {
       formData.append("accion", "filtrar_fechas");
       formData.append("inicio", info.startStr);
       formData.append("fin", info.endStr);
-
+      
       try {
         const res = await fetch("consultas.php", {
           method: "POST",
           body: formData
         });
-
+        
         const data = await res.json();
         successCallback(data); // FullCalendar muestra los eventos
       } catch (err) {
