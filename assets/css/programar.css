@@ -62,7 +62,6 @@
 }
 
 .categorias-select {
-
     color: #000000;
     border: 2px solid #0096C7;
     cursor: pointer;
@@ -106,7 +105,8 @@ h1 {
 }
 
 .upload-area {
-    border: 3px dashed #667eea;
+    color: #000000;
+    border: 2px solid #0096C7;
     border-radius: 10px;
     padding: 40px;
     text-align: center;
@@ -122,7 +122,8 @@ h1 {
 
 .upload-area.drag-over {
     background: #e8ebff;
-    border-color: #5a67d8;
+    color: #000000;
+    border: 2px solid #0096C7;
 }
 
 input[type="file"] {
@@ -130,7 +131,7 @@ input[type="file"] {
 }
 
 .btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #0096C7;
     color: white;
     padding: 12px 30px;
     border: none;

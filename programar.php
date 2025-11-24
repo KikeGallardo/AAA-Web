@@ -39,22 +39,35 @@
             </div>
         </div>
          <div class="container">
-            <div class="upload-area" id="uploadArea">
-                <p style="font-size: 18px; color: #666; margin-bottom: 20px;">
-                    Arrastra tu archivo de programación XLSX aquí o haz clic para seleccionar
-                </p>
-                <input type="file" id="fileInput" accept=".xlsx, .xls">
-                <button class="btn" onclick="document.getElementById('fileInput').click()">
-                    Cargar Programación
-                </button>
+        <h1>Programación de Partidos - Academia Antioqueña</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p style="font-size: 18px; color: #666; margin-bottom: 20px;">
+                Arrastra tu archivo de programación XLSX aquí o haz clic para seleccionar
+            </p>
+            <input type="file" id="fileInput" accept=".xlsx, .xls">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                Cargar Programación
+            </button>
+        </div>
+        <div class="loading" id="loading">⏳ Procesando archivo...</div>
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+        
+        <div class="action-buttons" id="actionButtons" style="display: none;">
+            <button class="btn btn-success" id="saveBtn" onclick="guardarPartidos()">
+                Guardar Programación en Base de Datos
+            </button>
+            <button class="btn btn-secondary" id="exportBtn" onclick="exportarExcel()">
+                Exportar Excel Editado
+            </button>
+        </div>
+        
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <div class="info-edit">
+                <span>Haz clic en cualquier celda para editarla</span>
             </div>
-            
-            <div class="loading" id="loading">⏳ Procesando archivo...</div>
-            <div class="error" id="error"></div>
-            <div class="success" id="success"></div>
-            
-            <div class="table-container" id="tableContainer" style="display: none;">
-                <table id="dataTable" class="cuadricula"></table>
+                <table id="dataTable"></table>
             </div>
         </div>
 

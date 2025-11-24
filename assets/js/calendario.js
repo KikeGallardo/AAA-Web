@@ -123,12 +123,6 @@ document.addEventListener("DOMContentLoaded", function() {
   // Se crea el calendario
   calendar.render();
 
-  async function cargarUsuarios() {
-    const res = await fetch("consultas.php?accion=usuarios");
-    const data = await res.json();
-    console.log("Usuarios:", data);
-  }
-
   function abrirModal(fecha) {
       document.getElementById("anoModal").textContent = "Información: " + fecha ;
       document.getElementById("miModal").style.display = "block";

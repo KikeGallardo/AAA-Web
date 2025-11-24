@@ -6,11 +6,12 @@ const errorDiv = document.getElementById('error');
 const successDiv = document.getElementById('success');
 const tableContainer = document.getElementById('tableContainer');
 const dataTable = document.getElementById('dataTable');
-const filters = document.getElementById('filters');
+const actionButtons = document.getElementById('actionButtons');
 
 // Variables globales para los datos y filtros
 let allData = [];
 let headers = [];
+let editedCells = new Set(); // Para rastrear celdas editadas
 
 // Eventos de drag and drop
 uploadArea.addEventListener('dragover', (e) => {
@@ -101,8 +102,6 @@ function handleFile(file) {
                 return row.some(cell => cell !== '' && cell !== null) && 
                        !row.some(cell => cell && cell.toString().toUpperCase().includes('GRUPO'));
             });
-            console.log(headers)
-            console.log(allData)
             
             // Crear tabla y filtros
             createTable(allData);
@@ -111,6 +110,7 @@ function handleFile(file) {
             successDiv.textContent = `✓ Archivo cargado exitosamente: ${file.name} (${allData.length} partidos encontrados)`;
             successDiv.style.display = 'block';
             tableContainer.style.display = 'block';
+            actionButtons.style.display = 'block';
             
         } catch (error) {
             showError('Error al procesar el archivo: ' + error.message);
@@ -157,6 +157,19 @@ function excelTimeToJSTime(serial) {
 }
 
 /**
+ * Formatea una fecha si es texto en formato español
+ * @param {string} dateStr - Fecha en texto
+ * @returns {string} - Fecha formateada o texto original
+ */
+function formatSpanishDate(dateStr) {
+    // Si ya está en formato de fecha español con día, mes y año, la devuelve tal cual
+    if (typeof dateStr === 'string' && dateStr.includes('de') && dateStr.includes('de 20')) {
+        return dateStr;
+    }
+    return dateStr;
+}
+
+/**
  * Crea una tabla HTML a partir de los datos del Excel
  * @param {Array} data - Datos en formato de array de arrays
  */
@@ -174,22 +187,27 @@ function createTable(data) {
     html += '</tr></thead><tbody>';
     
     // Crear filas de datos
-    data.forEach(row => {
+    data.forEach((row, rowIndex) => {
         html += '<tr>';
-        row.forEach((cell, index) => {
+        row.forEach((cell, colIndex) => {
             let value = cell;
             
-            // Convertir fechas
-            if (index === fechaIndex && typeof cell === 'number' && cell > 1000) {
+            // Convertir fechas si son números
+            if (colIndex === fechaIndex && typeof cell === 'number' && cell > 1000) {
                 value = excelDateToJSDate(cell);
             }
+            // Si la fecha es texto, mantenerla tal cual
+            else if (colIndex === fechaIndex && typeof cell === 'string') {
+                value = formatSpanishDate(cell);
+            }
             
-            // Convertir horas
-            if (index === horaIndex && typeof cell === 'number' && cell < 1) {
+            // Convertir horas si son números decimales
+            if (colIndex === horaIndex && typeof cell === 'number' && cell < 1) {
                 value = excelTimeToJSTime(cell);
             }
             
-            html += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+            // Hacer la celda editable
+            html += `<td contenteditable="true" data-row="${rowIndex}" data-col="${colIndex}" onblur="updateCell(this)">${value !== undefined && value !== null ? value : ''}</td>`;
         });
         html += '</tr>';
     });
@@ -197,28 +215,115 @@ function createTable(data) {
     html += '</tbody>';
     dataTable.innerHTML = html;
 }
+
 /**
- * Aplica los filtros seleccionados
+ * Actualiza el valor de una celda cuando se edita
  */
-function applyFilters() {
-    const grupoFilter = document.getElementById('grupoFilter').value;
-    const categoriaFilter = document.getElementById('categoriaFilter').value;
-    const fechaFilter = document.getElementById('fechaFilter').value;
+function updateCell(cell) {
+    const row = parseInt(cell.dataset.row);
+    const col = parseInt(cell.dataset.col);
+    const newValue = cell.textContent.trim();
     
-    const grupoIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('GRUPO'));
-    const categoriaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('CATEGORIA'));
-    const fechaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('FECHA'));
+    // Actualizar el array de datos
+    allData[row][col] = newValue;
     
-    const filteredData = allData.filter(row => {
-        const matchGrupo = !grupoFilter || (grupoIndex >= 0 && row[grupoIndex] == grupoFilter);
-        const matchCategoria = !categoriaFilter || (categoriaIndex >= 0 && row[categoriaIndex] == categoriaFilter);
-        const matchFecha = !fechaFilter || (fechaIndex >= 0 && row[fechaIndex] == fechaFilter);
-        
-        return matchGrupo && matchCategoria && matchFecha;
+    // Marcar como editada
+    cell.classList.add('edited-cell');
+    editedCells.add(`${row}-${col}`);
+}
+
+/**
+ * Guarda los partidos en la base de datos
+ */
+async function guardarPartidos() {
+    if (allData.length === 0) {
+        showError('No hay datos para guardar');
+        return;
+    }
+    
+    // Confirmar antes de guardar
+    if (!confirm(`¿Estás seguro de guardar ${allData.length} partidos en la base de datos?`)) {
+        return;
+    }
+    
+    loading.style.display = 'block';
+    errorDiv.style.display = 'none';
+    
+    // ✅ PRIMERO: Preparar datos para enviar
+    const partidosData = allData.map(row => {
+        const partido = {};
+        headers.forEach((header, index) => {
+            partido[header] = row[index];
+        });
+        return partido;
     });
     
-    createTable(filteredData);
-    successDiv.textContent = `✓ Mostrando ${filteredData.length} de ${allData.length} partidos`;
+    // ✅ DESPUÉS: Crear FormData con los datos ya preparados
+    const formData = new FormData();
+    formData.append("partidos", JSON.stringify(partidosData));
+    
+    try {
+        // Enviar a PHP
+        const response = await fetch("guardar_partidos.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                partidos: partidosData
+            })
+        });
+        
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.error) {
+            console.error("Error del servidor:", data.error);
+            showError(data.error);
+            return;
+        }
+        
+        if (data.success) {
+            successDiv.textContent = `✓ ${data.message} - ${data.guardados} partidos guardados`;
+            successDiv.style.display = 'block';
+            editedCells.clear();
+            
+            // Remover marcas de edición
+            document.querySelectorAll('.edited-cell').forEach(cell => {
+                cell.classList.remove('edited-cell');
+            });
+        } else {
+            showError(data.message || 'Error al guardar los partidos');
+        }
+        
+    } catch (error) {
+        loading.style.display = 'none';
+        showError('Error de conexión: ' + error.message);
+    }
+}
+
+/**
+ * Exporta la tabla editada a Excel
+ */
+function exportarExcel() {
+    // Crear un nuevo workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Crear datos con encabezados
+    const wsData = [headers, ...allData];
+    
+    // Crear worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // Agregar worksheet al workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Programación");
+    
+    // Generar archivo y descargar
+    XLSX.writeFile(wb, `Programacion_Editada_${new Date().getTime()}.xlsx`);
+    
+    successDiv.textContent = '✓ Excel exportado correctamente';
+    successDiv.style.display = 'block';
 }
 
 /**
