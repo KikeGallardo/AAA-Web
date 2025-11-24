@@ -203,10 +203,8 @@ endif;
 
 <!-- BUSCADOR -->
 <div class="buscar-container">
-    <form method="GET">
-        <input type="text" name="buscar" placeholder="Buscar árbitro..." value="<?= h($busqueda) ?>">
-        <button type="submit">Buscar</button>
-    </form>
+    <input type="text" name="buscar" id="buscador" placeholder="Buscar árbitro..." value="<?= h($busqueda) ?>">
+    <div id="resultados"></div>
 </div>
 
 <!-- TABLA ÁRBITROS -->
@@ -446,6 +444,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 </script>
+<script src="assets/js/arbitros.js"></script>
 
 </body>
 </html>

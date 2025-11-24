@@ -227,6 +227,35 @@ switch ($accion) {
         echo json_encode($result);
         break;
 
+    case 'buscar_arbitro':
+      $q = isset($_POST['q']) ? trim($_POST['q']) : '';
+      $resultados = [];
+
+      try {
+          if ($q !== '') {
+              $stmt = $conn->prepare("SELECT idArbitro, nombre, apellido, cedula, fechaNacimiento, correo, telefono, categoriaArbitro 
+                                    FROM arbitro 
+                                    WHERE nombre LIKE ? 
+                                       OR apellido LIKE ? 
+                                       OR cedula LIKE ? 
+                                       OR correo LIKE ? 
+                                       OR telefono LIKE ? 
+                                       OR categoriaArbitro LIKE ?");
+              $like = "%$q%";
+              $stmt->bind_param('ssssss', $like, $like, $like, $like, $like, $like);
+              $stmt->execute();
+              $res = $stmt->get_result();
+
+              while ($row = $res->fetch_assoc()) {
+                  $resultados[] = $row;
+              }
+          }
+          echo json_encode($resultados);
+      } catch (Exception $e) {
+          echo json_encode(["error" => $e->getMessage()]);
+      }
+      break;
+
   default:
     echo json_encode([]);
 }
