@@ -50,3 +50,21 @@
     visibility: hidden;
     transition: all 0.3s ease-in-out;
 }
+
+/* .footer {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 10px;
+    background: #0096C7;
+    color: #000000;
+    margin-top: 40px;
+    box-shadow: 0 15px 10px rgba(0,0,0,0.2);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 0%;
+} */

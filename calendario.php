@@ -1,4 +1,5 @@
 <?php require_once "assets/header.php"; ?>
+<?php require_once "assets/footer.php"; ?>
 <html lang="en">
 <head>
     <meta charset="UTF-8">

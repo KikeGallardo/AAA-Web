@@ -37,7 +37,5 @@
     </div>
     <button class="logout"><a href="login.php">Cerrar sesión</a></button>
 </body>
-<footer class="footer">
-    <p>&copy; 2025 Proyecto. Todos los derechos reservados.</p>
-</footer>
+<?php require_once "assets/footer.php"; ?>
 </html>

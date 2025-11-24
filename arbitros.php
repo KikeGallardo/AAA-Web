@@ -136,7 +136,6 @@ if ($where) {
 $stmt->execute();
 $arbitros = $stmt->get_result();
 ?>
-<?php require_once "assets/header.php"; ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -166,6 +165,8 @@ $arbitros = $stmt->get_result();
 <?php 
     unset($_SESSION['mensaje']);
 endif; 
+require_once "assets/header.php";
+require_once "assets/footer.php";
 ?>
 
 <div class="subtitulo"><h1>GESTIÓN DE ÁRBITROS</h1></div>
@@ -203,8 +204,10 @@ endif;
 
 <!-- BUSCADOR -->
 <div class="buscar-container">
-    <input type="text" name="buscar" id="buscador" placeholder="Buscar árbitro..." value="<?= h($busqueda) ?>">
-    <div id="resultados"></div>
+    <form method="GET">
+        <input type="text" name="buscar" placeholder="Buscar árbitro..." value="<?= h($busqueda) ?>">
+        <button type="submit">Buscar</button>
+    </form>
 </div>
 
 <!-- TABLA ÁRBITROS -->
@@ -444,7 +447,6 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 </script>
-<script src="assets/js/arbitros.js"></script>
 
 </body>
 </html>
