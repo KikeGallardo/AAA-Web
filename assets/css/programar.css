@@ -1,24 +1,3 @@
-.subtitulo {
-    box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    text-align: center;
-    background: #fff;
-    padding: 20px 15px;
-    border-radius: 25px;
-    margin-left: 20%;
-    margin-right: 20%;
-    margin-top: 2%;
-    margin-bottom: 1%;
-    box-shadow: 0 15px 10px rgba(0,0,0,0.2);
-}
-
-.subtitulo h1 {
-    font-size: 2em;
-    margin-bottom: 10px;
-}
-
 .contenedorPrincipal {
     margin: auto;
     padding: 10px;

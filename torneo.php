@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestión de Torneos</title>
 <link rel="stylesheet" href="assets/css/torneo.css">
+<link rel="stylesheet" href="assets/css/subtitulos.css">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <div class="subtitulo">
-        <h1>TORNEO</h1>
+
 
 <!-- Notificaciones -->
 <?php if (isset($_SESSION['mensaje'])): ?>
@@ -29,8 +29,9 @@
     unset($_SESSION['mensaje']);
 endif; 
 ?>
-
-<div class="subtitulo"><h1>GESTIÓN DE TORNEOS</h1></div>
+    <div class="subtitulo">
+        <h1>GESTIÓN DE TORNEOS</h1>
+    </div>
 
 <!-- FORMULARIO REGISTRO -->
 <div class="form-container">

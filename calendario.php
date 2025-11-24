@@ -8,8 +8,10 @@
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.19/index.global.min.js'></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/calendario.css">
+    <link rel="stylesheet" href="assets/css/subtitulos.css">
 </head>
 <body>
+  <div class="subtitulo"><h1>CALENDARIO DE PARTIDOS</h1></div>
       <main>
         <div id='calendar' class=calendar-container></div>
         <script src="https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.19/index.global.min.js"></script>

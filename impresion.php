@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="assets/css/impresion.css">
 </head>
 <body>
+    <div class="subtitulo"><h1>IMPRIMIR</h1></div>
+
     <!-- Filtrar torneos por intervalos de fechas -->
     <h1>Impresión de datos</h1>
     

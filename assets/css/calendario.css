@@ -37,35 +37,6 @@
     padding: 3px 6px;
     border-radius: 5px;
 }
-/* 
-.modal {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 90%;
-    margin: 5%;
-}
-
-
-.fc-license-message {
-    visibility: hidden;
-}
-
-#cerrarModal {
-    width: 1%;
-    border: 1px #000;
-} */
-
 /* Fondo oscuro del modal */
 .modal {
   position: fixed;
@@ -151,4 +122,8 @@
 td.precio {
   font-weight: bold;
   color: #2a7;
+}
+
+.fc-license-message {
+  visibility: hidden;
 }

@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 /* =========================================
    SUBTÍTULO / TÍTULO
 ========================================= */
-=======
 /* ===== VARIABLES Y RESET ===== */
 :root {
     --primary: #2563eb;
@@ -29,64 +27,6 @@ body {
     background: var(--gray-50);
     color: var(--gray-900);
     line-height: 1.6;
-}
-
-/* ===== HEADER Y NAVEGACIÓN ===== */
-header {
-    background: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.nav_bar_upper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1rem 2rem;
-    gap: 2rem;
-}
-
-.nav_links {
-    list-style: none;
-    display: flex;
-    gap: 1.5rem;
-}
-
-.nav_links a {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    color: var(--gray-700);
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.nav_links a:hover {
-    background: var(--gray-100);
-    color: var(--primary);
-}
-
-.nav_links svg {
-    width: 24px;
-    height: 24px;
-}
-
-/* ===== SUBTÍTULO ===== */
->>>>>>> f24cdbd064a26f9d9d389b4bb44064245cfce15f
-.subtitulo {
-    text-align: center;
-    padding: 2rem;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    margin-bottom: 2rem;
-}
-
-.subtitulo h1 {
-    font-size: 2rem;
-    font-weight: 700;
 }
 
 /* ===== FORMULARIO DE REGISTRO ===== */
