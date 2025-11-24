@@ -1,207 +1,233 @@
-let allData = [];
-let filteredData = [];
-
-// Configurar drag and drop
+// Obtener elementos del DOM
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
+const loading = document.getElementById('loading');
+const errorDiv = document.getElementById('error');
+const successDiv = document.getElementById('success');
+const tableContainer = document.getElementById('tableContainer');
+const dataTable = document.getElementById('dataTable');
+const filters = document.getElementById('filters');
 
-uploadArea.addEventListener('click', () => fileInput.click());
+// Variables globales para los datos y filtros
+let allData = [];
+let headers = [];
 
+// Eventos de drag and drop
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('dragover');
+    uploadArea.classList.add('drag-over');
 });
 
 uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
+    uploadArea.classList.remove('drag-over');
 });
 
 uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('dragover');
+    uploadArea.classList.remove('drag-over');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
         handleFile(files[0]);
     }
 });
 
+// Evento de selección de archivo
 fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
         handleFile(e.target.files[0]);
     }
 });
 
+/**
+ * Procesa el archivo Excel seleccionado
+ * @param {File} file - Archivo a procesar
+ */
 function handleFile(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/)) {
-        alert('Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
+    // Validar tipo de archivo
+    const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+    ];
+    
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
+        showError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
         return;
     }
 
-    document.getElementById('loading').classList.add('active');
-    
+    // Mostrar loading
+    loading.style.display = 'block';
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    tableContainer.style.display = 'none';
+
+    // Leer archivo
     const reader = new FileReader();
     
-    reader.onload = function(e) {
+    reader.onload = (e) => {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // Leer la primera hoja
+            // Obtener la primera hoja
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
             
-            processData(jsonData);
+            // Convertir a JSON
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+            
+            if (jsonData.length === 0) {
+                showError('El archivo está vacío');
+                return;
+            }
+            
+            // Buscar la fila de encabezados (la que contiene "GRUPO", "CATEGORIA", etc.)
+            let headerRowIndex = -1;
+            for (let i = 0; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (row.some(cell => cell && cell.toString().toUpperCase().includes('CATEGORÍA'))) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+            
+            if (headerRowIndex === -1) {
+                showError('No se encontraron los encabezados esperados en el archivo');
+                return;
+            }
+            
+            // Guardar encabezados y datos
+            headers = jsonData[headerRowIndex];
+            allData = jsonData.slice(headerRowIndex + 1).filter(row => {
+                // Filtrar filas vacías o que son encabezados repetidos
+                return row.some(cell => cell !== '' && cell !== null) && 
+                       !row.some(cell => cell && cell.toString().toUpperCase().includes('GRUPO'));
+            });
+            console.log(headers)
+            console.log(allData)
+            
+            // Crear tabla y filtros
+            createTable(allData);
+            
+            loading.style.display = 'none';
+            successDiv.textContent = `✓ Archivo cargado exitosamente: ${file.name} (${allData.length} partidos encontrados)`;
+            successDiv.style.display = 'block';
+            tableContainer.style.display = 'block';
             
         } catch (error) {
-            alert('Error al procesar el archivo: ' + error.message);
-            console.error(error);
-        } finally {
-            document.getElementById('loading').classList.remove('active');
+            showError('Error al procesar el archivo: ' + error.message);
         }
+    };
+    
+    reader.onerror = () => {
+        showError('Error al leer el archivo');
     };
     
     reader.readAsArrayBuffer(file);
 }
 
-function processData(jsonData) {
-    allData = [];
+/**
+ * Convierte el número serial de Excel a fecha
+ * @param {number} serial - Número serial de Excel
+ * @returns {string} - Fecha formateada
+ */
+function excelDateToJSDate(serial) {
+    const utc_days = Math.floor(serial - 25569);
+    const utc_value = utc_days * 86400;
+    const date_info = new Date(utc_value * 1000);
     
-    // Encontrar la fila de encabezados
-    let headerRow = -1;
-    for (let i = 0; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (row.includes('CATEGORIA') || row.includes('EQUIPO A')) {
-            headerRow = i;
-            break;
-        }
-    }
-
-    if (headerRow === -1) {
-        alert('No se encontraron los encabezados esperados');
-        return;
-    }
-
-    // Procesar cada fila de datos
-    for (let i = headerRow + 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        
-        // Saltar filas vacías
-        if (!row || row.length === 0 || !row.some(cell => cell)) continue;
-        
-        const partido = {
-            categoria: row[1] || '',
-            equipoA: row[2] || '',
-            vs: row[3] || '',
-            equipoB: row[4] || '',
-            fecha: row[5] || '',
-            hora: row[6] || '',
-            escenario: row[7] || '',
-            arbitro1: row[8] || '',
-            arbitro2: row[9] || ''
-        };
-
-        // Solo agregar si tiene información relevante
-        if (partido.equipoA || partido.equipoB || partido.categoria) {
-            allData.push(partido);
-        }
-    }
-
-    filteredData = [...allData];
-    displayData();
-    updateStats();
-    populateFilters();
-    document.getElementById('dataSection').classList.add('active');
-}
-
-function displayData() {
-    const tbody = document.getElementById('tableBody');
+    const day = date_info.getUTCDate().toString().padStart(2, '0');
+    const month = (date_info.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date_info.getUTCFullYear();
     
-    if (filteredData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No se encontraron resultados</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = filteredData.map(partido => `
-        <tr>
-            <td><strong>${partido.categoria}</strong></td>
-            <td>${partido.equipoA}</td>
-            <td>${partido.equipoB}</td>
-            <td>${partido.fecha}</td>
-            <td>${partido.hora}</td>
-            <td>${partido.escenario}</td>
-            <td>${partido.arbitro1}</td>
-            <td>${partido.arbitro2}</td>
-        </tr>
-    `).join('');
+    return `${day}/${month}/${year}`;
 }
 
-function updateStats() {
-    const stats = document.getElementById('stats');
-    const totalPartidos = allData.length;
-    const categorias = new Set(allData.map(p => p.categoria).filter(c => c)).size;
-    const escenarios = new Set(allData.map(p => p.escenario).filter(e => e)).size;
-
-    stats.innerHTML = `
-        <div class="stat-card">
-            <div class="stat-number">${totalPartidos}</div>
-            <div class="stat-label">Total Partidos</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${categorias}</div>
-            <div class="stat-label">Categorías</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">${escenarios}</div>
-            <div class="stat-label">Escenarios</div>
-        </div>
-    `;
+/**
+ * Convierte el número decimal de Excel a hora
+ * @param {number} serial - Número decimal de Excel (0.75 = 6:00 PM)
+ * @returns {string} - Hora formateada
+ */
+function excelTimeToJSTime(serial) {
+    const hours = Math.floor(serial * 24);
+    const minutes = Math.floor((serial * 24 * 60) % 60);
+    
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-function populateFilters() {
-    // Categorías
-    const categorias = [...new Set(allData.map(p => p.categoria).filter(c => c))].sort();
-    const categoriaFilter = document.getElementById('categoriaFilter');
-    categoriaFilter.innerHTML = '<option value="">Todas las categorías</option>' +
-        categorias.map(c => `<option value="${c}">${c}</option>`).join('');
-
-    // Escenarios
-    const escenarios = [...new Set(allData.map(p => p.escenario).filter(e => e))].sort();
-    const escenarioFilter = document.getElementById('escenarioFilter');
-    escenarioFilter.innerHTML = '<option value="">Todos los escenarios</option>' +
-        escenarios.map(e => `<option value="${e}">${e}</option>`).join('');
-}
-
-// Filtros
-document.getElementById('searchInput').addEventListener('input', applyFilters);
-document.getElementById('categoriaFilter').addEventListener('change', applyFilters);
-document.getElementById('escenarioFilter').addEventListener('change', applyFilters);
-
-function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const categoria = document.getElementById('categoriaFilter').value;
-    const escenario = document.getElementById('escenarioFilter').value;
-
-    filteredData = allData.filter(partido => {
-        const matchSearch = !searchTerm || 
-            Object.values(partido).some(val => 
-                String(val).toLowerCase().includes(searchTerm)
-            );
-        const matchCategoria = !categoria || partido.categoria === categoria;
-        const matchEscenario = !escenario || partido.escenario === escenario;
-
-        return matchSearch && matchCategoria && matchEscenario;
+/**
+ * Crea una tabla HTML a partir de los datos del Excel
+ * @param {Array} data - Datos en formato de array de arrays
+ */
+function createTable(data) {
+    let html = '<thead><tr>';
+    
+    // Identificar índices de fecha y hora
+    const fechaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('FECHA'));
+    const horaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('HORA'));
+    
+    // Crear encabezados
+    headers.forEach(header => {
+        html += `<th>${header || ''}</th>`;
     });
-
-    displayData();
+    html += '</tr></thead><tbody>';
+    
+    // Crear filas de datos
+    data.forEach(row => {
+        html += '<tr>';
+        row.forEach((cell, index) => {
+            let value = cell;
+            
+            // Convertir fechas
+            if (index === fechaIndex && typeof cell === 'number' && cell > 1000) {
+                value = excelDateToJSDate(cell);
+            }
+            
+            // Convertir horas
+            if (index === horaIndex && typeof cell === 'number' && cell < 1) {
+                value = excelTimeToJSTime(cell);
+            }
+            
+            html += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+        });
+        html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    dataTable.innerHTML = html;
+}
+/**
+ * Aplica los filtros seleccionados
+ */
+function applyFilters() {
+    const grupoFilter = document.getElementById('grupoFilter').value;
+    const categoriaFilter = document.getElementById('categoriaFilter').value;
+    const fechaFilter = document.getElementById('fechaFilter').value;
+    
+    const grupoIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('GRUPO'));
+    const categoriaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('CATEGORIA'));
+    const fechaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('FECHA'));
+    
+    const filteredData = allData.filter(row => {
+        const matchGrupo = !grupoFilter || (grupoIndex >= 0 && row[grupoIndex] == grupoFilter);
+        const matchCategoria = !categoriaFilter || (categoriaIndex >= 0 && row[categoriaIndex] == categoriaFilter);
+        const matchFecha = !fechaFilter || (fechaIndex >= 0 && row[fechaIndex] == fechaFilter);
+        
+        return matchGrupo && matchCategoria && matchFecha;
+    });
+    
+    createTable(filteredData);
+    successDiv.textContent = `✓ Mostrando ${filteredData.length} de ${allData.length} partidos`;
 }
 
-function exportData() {
-    const dataStr = JSON.stringify(filteredData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'programacion_partidos.json';
-    link.click();
-    URL.revokeObjectURL(url);
+/**
+ * Muestra un mensaje de error
+ * @param {string} message - Mensaje de error a mostrar
+ */
+function showError(message) {
+    loading.style.display = 'none';
+    errorDiv.textContent = '❌ ' + message;
+    errorDiv.style.display = 'block';
+    successDiv.style.display = 'none';
 }
