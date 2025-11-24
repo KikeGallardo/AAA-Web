@@ -136,10 +136,7 @@ if ($where) {
 $stmt->execute();
 $arbitros = $stmt->get_result();
 ?>
-<<<<<<< HEAD
 <?php require_once "assets/header.php"; ?>
-=======
->>>>>>> f24cdbd064a26f9d9d389b4bb44064245cfce15f
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -150,16 +147,11 @@ $arbitros = $stmt->get_result();
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-<<<<<<< HEAD
-<div class="subtitulo">
-    <h1>ARBITROS</h1>
-=======
 
 <!-- Notificaciones -->
 <?php if (isset($_SESSION['mensaje'])): ?>
 <div id="toast" class="toast toast-<?= $_SESSION['mensaje']['tipo'] ?>">
     <?= h($_SESSION['mensaje']['texto']) ?>
->>>>>>> f24cdbd064a26f9d9d389b4bb44064245cfce15f
 </div>
 <script>
     setTimeout(() => {
