@@ -177,84 +177,84 @@ switch ($accion) {
       echo json_encode($partidos);
       break;
 
-    case "obtener_partidos_por_dia":
-      $dia = $_POST['dia'] ?? '';
+  case "obtener_partidos_por_dia":
+    $dia = $_POST['dia'] ?? '';
 
-      $stmt = $conn->prepare("
-        SELECT 
-        p.idPartido,
-        p.fecha,
-        p.hora,
-        p.idEquipo1,
-        p.idEquipo2,
-        p.canchaLugar,
-        p.categoriaText,
+    $stmt = $conn->prepare("
+      SELECT 
+      p.idPartido,
+      p.fecha,
+      p.hora,
+      p.idEquipo1,
+      p.idEquipo2,
+      p.canchaLugar,
+      p.categoriaText,
 
-        e1.nombreEquipo AS equipoLocal,
-        e2.nombreEquipo AS equipoVisitante,
+      e1.nombreEquipo AS equipoLocal,
+      e2.nombreEquipo AS equipoVisitante,
 
-        cp.nombreCategoria AS categoriaPago,
+      cp.nombreCategoria AS categoriaPago,
 
-        a1.nombre AS arbitroPrincipal,
-        cp.pagoArbitro1 AS pagoPrincipal,
+      a1.nombre AS arbitroPrincipal,
+      cp.pagoArbitro1 AS pagoPrincipal,
 
-        a2.nombre AS arbitroAsistente1,
-        cp.pagoArbitro2 AS pagoAsistente1,
+      a2.nombre AS arbitroAsistente1,
+      cp.pagoArbitro2 AS pagoAsistente1,
 
-        a3.nombre AS arbitroAsistente2,
-        cp.pagoArbitro3 AS pagoAsistente2,
+      a3.nombre AS arbitroAsistente2,
+      cp.pagoArbitro3 AS pagoAsistente2,
 
-        a4.nombre AS arbitroCuarto,
-        cp.pagoArbitro4 AS pagoCuarto
+      a4.nombre AS arbitroCuarto,
+      cp.pagoArbitro4 AS pagoCuarto
 
-        FROM partido p
-        INNER JOIN equipo e1 ON p.idEquipo1 = e1.idEquipo
-        INNER JOIN equipo e2 ON p.idEquipo2 = e2.idEquipo
-        INNER JOIN categoriaPagoArbitro cp 
-              ON cp.nombreCategoria = p.categoriaText
-        LEFT JOIN arbitro a1 ON p.idArbitro1 = a1.idArbitro
-        LEFT JOIN arbitro a2 ON p.idArbitro2 = a2.idArbitro
-        LEFT JOIN arbitro a3 ON p.idArbitro3 = a3.idArbitro
-        LEFT JOIN arbitro a4 ON p.idArbitro4 = a4.idArbitro
+      FROM partido p
+      INNER JOIN equipo e1 ON p.idEquipo1 = e1.idEquipo
+      INNER JOIN equipo e2 ON p.idEquipo2 = e2.idEquipo
+      INNER JOIN categoriaPagoArbitro cp 
+            ON cp.nombreCategoria = p.categoriaText
+      LEFT JOIN arbitro a1 ON p.idArbitro1 = a1.idArbitro
+      LEFT JOIN arbitro a2 ON p.idArbitro2 = a2.idArbitro
+      LEFT JOIN arbitro a3 ON p.idArbitro3 = a3.idArbitro
+      LEFT JOIN arbitro a4 ON p.idArbitro4 = a4.idArbitro
 
-        WHERE p.fecha BETWEEN ? AND ?
-      ");
-        
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
+      WHERE p.fecha BETWEEN ? AND ?
+    ");
+      
+      $stmt->bind_param("i", $id);
+      $stmt->execute();
+      $result = $stmt->get_result()->fetch_assoc();
 
-        echo json_encode($result);
-        break;
-
-    case 'buscar_arbitro':
-      $q = isset($_POST['q']) ? trim($_POST['q']) : '';
-      $resultados = [];
-
-      try {
-          if ($q !== '') {
-              $stmt = $conn->prepare("SELECT idArbitro, nombre, apellido, cedula, fechaNacimiento, correo, telefono, categoriaArbitro 
-                                    FROM arbitro 
-                                    WHERE nombre LIKE ? 
-                                       OR apellido LIKE ? 
-                                       OR cedula LIKE ? 
-                                       OR correo LIKE ? 
-                                       OR telefono LIKE ? 
-                                       OR categoriaArbitro LIKE ?");
-              $like = "%$q%";
-              $stmt->bind_param('ssssss', $like, $like, $like, $like, $like, $like);
-              $stmt->execute();
-              $res = $stmt->get_result();
-
-              while ($row = $res->fetch_assoc()) {
-                  $resultados[] = $row;
-              }
-          }
-          echo json_encode($resultados);
-      } catch (Exception $e) {
-          echo json_encode(["error" => $e->getMessage()]);
-      }
+      echo json_encode($result);
       break;
+
+  case 'buscar_arbitro':
+    $q = isset($_POST['q']) ? trim($_POST['q']) : '';
+    $resultados = [];
+
+    try {
+        if ($q !== '') {
+            $stmt = $conn->prepare("SELECT idArbitro, nombre, apellido, cedula, fechaNacimiento, correo, telefono, categoriaArbitro 
+                                  FROM arbitro 
+                                  WHERE nombre LIKE ? 
+                                      OR apellido LIKE ? 
+                                      OR cedula LIKE ? 
+                                      OR correo LIKE ? 
+                                      OR telefono LIKE ? 
+                                      OR categoriaArbitro LIKE ?");
+            $like = "%$q%";
+            $stmt->bind_param('ssssss', $like, $like, $like, $like, $like, $like);
+            $stmt->execute();
+            $res = $stmt->get_result();
+
+            while ($row = $res->fetch_assoc()) {
+                $resultados[] = $row;
+            }
+        }
+        echo json_encode($resultados);
+    } catch (Exception $e) {
+        echo json_encode(["error" => $e->getMessage()]);
+    }
+    break;
 
   default:
     echo json_encode([]);

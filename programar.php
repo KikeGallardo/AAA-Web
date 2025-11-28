@@ -1,5 +1,7 @@
 <?php require_once "assets/header.php"; ?>
 <?php require_once "assets/footer.php"; ?>
+<?php include "basedatos.php";?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,9 +23,22 @@
                     <!-- Lista desplegable de categorias con la opción de crear más-->
                     <select id="categoriasSelect" class="categorias-select">
                         <option value="" disabled selected>Selecciona un torneo</option>
-                        <option value="">Opción 1</option>
-                        <option value="">Opción 2</option>
-                        <option value="">Opción 3</option>
+
+                        <?php
+                        // Consulta correcta (id + nombre)
+                        $stmt = $conn->prepare("SELECT idTorneo, nombreTorneo FROM torneo ORDER BY idTorneo DESC");
+                        $stmt->execute();
+                        $result = $stmt->get_result();
+
+                        // Recorrer todos los torneos
+                        while ($torneo = $result->fetch_assoc()): ?>
+                            <option value="<?php echo $torneo['idTorneo']; ?>">
+                                <?php echo htmlspecialchars($torneo['nombreTorneo']); ?>
+                            </option>
+                        <?php endwhile;
+
+                        $stmt->close();
+                        ?>
                     </select>
                 </div>
             </div>
@@ -32,9 +47,9 @@
                     <!-- Lista desplegable de categorias con la opción de pago-->
                     <select id="pagoSelect" class="categorias-select">
                         <option value="" disabled selected>Programación de Pago</option>
-                        <option value="">Opción 1</option>
-                        <option value="">Opción 2</option>
-                        <option value="">Opción 3</option>
+                        <option value="">Pago inmediato</option>
+                        <option value="">pago a quincena</option>
+                        <option value="">Pago a plazos</option>
                     </select>
                 </div>
             </div>

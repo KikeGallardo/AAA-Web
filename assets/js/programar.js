@@ -7,6 +7,7 @@ const successDiv = document.getElementById('success');
 const tableContainer = document.getElementById('tableContainer');
 const dataTable = document.getElementById('dataTable');
 const actionButtons = document.getElementById('actionButtons');
+const selectCategorias = document.getElementById("categoriasSelect");
 
 // Variables globales para los datos y filtros
 let allData = [];
@@ -230,6 +231,49 @@ function updateCell(cell) {
     // Marcar como editada
     cell.classList.add('edited-cell');
     editedCells.add(`${row}-${col}`);
+}
+
+
+async function guardarPartidos() {
+    try {
+        // Enviar a PHP
+        const response = await fetch("consultas.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                partidos: partidosData
+            })
+        });
+        
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.error) {
+            console.error("Error del servidor:", data.error);
+            showError(data.error);
+            return;
+        }
+        
+        if (data.success) {
+            successDiv.textContent = `✓ ${data.message} - ${data.guardados} partidos guardados`;
+            successDiv.style.display = 'block';
+            editedCells.clear();
+            
+            // Remover marcas de edición
+            document.querySelectorAll('.edited-cell').forEach(cell => {
+                cell.classList.remove('edited-cell');
+            });
+        } else {
+            showError(data.message || 'Error al guardar los partidos');
+        }
+        
+    } catch (error) {
+        loading.style.display = 'none';
+        showError('Error de conexión: ' + error.message);
+    }
 }
 
 /**
