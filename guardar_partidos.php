@@ -283,8 +283,8 @@ function buscarArbitroConNotificacion(PDO $conn, $nombre, &$notificaciones) {
  */
 function guardarNotificaciones(PDO $conn, $notificaciones) {
     $stmt = $conn->prepare("
-        INSERT INTO notificaciones (tipo, mensaje, fecha_creacion) 
-        VALUES (:tipo, :mensaje, NOW())
+        INSERT INTO notificaciones (titulo, mensaje) 
+        VALUES (:tipo, :mensaje)
     ");
 
     foreach ($notificaciones as $notif) {
