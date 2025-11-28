@@ -6,7 +6,7 @@
 define('DB_HOST', 'db-fde-02.apollopanel.com');
 define('DB_PORT', '3306');
 define('DB_USER', 'u136076_tCDay64NMd');
-define('DB_PASS', 'AzlYnjAiSFN!d=ZtajgQa=q.');
+define('DB_PASS', 'oo2qzuwP!MlmTw02fpV6pJS+');
 define('DB_NAME', 's136076_Aribatraje');
 
 // Configuración de sesión

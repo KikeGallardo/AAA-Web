@@ -1,7 +1,7 @@
 <?php
 $servername = "db-fde-02.apollopanel.com:3306";
 $username = "u136076_tCDay64NMd";
-$password = "AzlYnjAiSFN!d=ZtajgQa=q.";
+$password = "oo2qzuwP!MlmTw02fpV6pJS+";
 $dbname = "s136076_Aribatraje";
 
 // Crear la conexión y configurar el timeout
