@@ -256,8 +256,39 @@ switch ($accion) {
     }
     break;
 
-  default:
-    echo json_encode([]);
+    case 'eliminar_noti':
+    try {
+        if (!isset($_POST['idNotificacion'])) {
+            echo json_encode(["status" => "error", "msg" => "ID no recibido"]);
+            exit;
+        }
+
+        $id = intval($_POST['idNotificacion']);
+
+        $stmt = $conn->prepare("DELETE FROM notificaciones WHERE idNotificacion = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        echo json_encode(["status" => "ok"]);
+    } catch (Exception $e) {
+        echo json_encode(["status" => "error", "msg" => $e->getMessage()]);
+    }
+    break;
+
+    case 'eliminar_todas':
+
+      header("Content-Type: application/json");
+
+      try {
+          $conn->query("DELETE FROM notificaciones");
+
+          echo json_encode(["status" => "ok"]);
+      }
+      catch (Exception $e) {
+          echo json_encode(["status" => "error", "msg" => $e->getMessage()]);
+      }
+      exit;
+
 }
 ?>
-

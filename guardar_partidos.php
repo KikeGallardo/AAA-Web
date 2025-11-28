@@ -3,7 +3,7 @@ header('Content-Type: application/json');
 require "basedatos_pdo.php";
 
 try {
-    // Recibir datos JSON UNA sola vez
+    // Recibir datos JSON
     $data = json_decode(file_get_contents("php://input"), true);
 
     if ($data === null) {
@@ -15,6 +15,45 @@ try {
     }
 
     $partidos = $data['partidos'];
+
+    // =============================================
+    // VALIDACIÓN PREVIA: Verificar árbitros faltantes
+    // =============================================
+    $arbitrosFaltantes = [];
+    
+    foreach ($partidos as $i => $p) {
+        $arbitrosEnPartido = [
+            $p['ARBITRO'] ?? '',
+            $p['ASISTENTE 1'] ?? '',
+            $p['ASISTENTE 2'] ?? '',
+            $p['ASISTENTE 3'] ?? ''
+        ];
+        
+        foreach ($arbitrosEnPartido as $nombreArbitro) {
+            if (!empty($nombreArbitro) && !arbitroExiste($conn, $nombreArbitro)) {
+                // Agregar a la lista si no está duplicado
+                if (!in_array($nombreArbitro, $arbitrosFaltantes)) {
+                    $arbitrosFaltantes[] = $nombreArbitro;
+                }
+            }
+        }
+    }
+
+    // Si hay árbitros faltantes, RECHAZAR la operación
+    if (!empty($arbitrosFaltantes)) {
+        echo json_encode([
+            "success" => false,
+            "error" => "No se puede guardar la programación. Faltan árbitros por registrar.",
+            "arbitros_faltantes" => $arbitrosFaltantes,
+            "total_faltantes" => count($arbitrosFaltantes),
+            "mensaje_detallado" => "Se encontraron " . count($arbitrosFaltantes) . " árbitros no registrados. Por favor, regístralos antes de continuar."
+        ]);
+        exit;
+    }
+
+    // =============================================
+    // Si llegamos aquí, TODOS los árbitros existen
+    // =============================================
 
     // Iniciar transacción
     $conn->beginTransaction();
@@ -52,29 +91,27 @@ try {
 
     $guardados = 0;
     $errores = [];
-    $notificaciones = [];
 
     foreach ($partidos as $i => $p) {
         try {
-
-            // Convierte la fecha al formato de la BD
+            // Convertir fecha
             $fecha = convertirFecha($p['FECHA'] ?? '');
 
             // Buscar o crear equipos
             $idEquipo1 = buscarOCrearEquipo($conn, $p['EQUIPO LOCAL'] ?? '');
             $idEquipo2 = buscarOCrearEquipo($conn, $p['EQUIPO VISITANTE'] ?? '');
 
-            // Buscar o crear categoría
+            // Categoría
             $idCategoria = $p['CATEGORÍA'];
 
             // Buscar o crear torneo
             $idTorneo = buscarOCrearTorneo($conn, $p['GRUPO'] ?? '');
 
-            // Buscar árbitros (sin crear, solo notificar si no existen)
-            $idArbitroPrincipal = buscarArbitroConNotificacion($conn, $p['ARBITRO'] ?? '', $notificaciones);
-            $idAsistente1 = buscarArbitroConNotificacion($conn, $p['ASISTENTE 1'] ?? '', $notificaciones);
-            $idAsistente2 = buscarArbitroConNotificacion($conn, $p['ASISTENTE 2'] ?? '', $notificaciones);
-            $idAsistente3 = buscarArbitroConNotificacion($conn, $p['ASISTENTE 3'] ?? '', $notificaciones);
+            // Buscar árbitros (ahora sabemos que TODOS existen)
+            $idArbitroPrincipal = buscarArbitro($conn, $p['ARBITRO'] ?? '');
+            $idAsistente1 = buscarArbitro($conn, $p['ASISTENTE 1'] ?? '');
+            $idAsistente2 = buscarArbitro($conn, $p['ASISTENTE 2'] ?? '');
+            $idAsistente3 = buscarArbitro($conn, $p['ASISTENTE 3'] ?? '');
 
             // Ejecutar INSERT
             $stmt->execute([
@@ -99,25 +136,14 @@ try {
         }
     }
 
-    // Guardar notificaciones de árbitros faltantes
-    if (!empty($notificaciones)) {
-        guardarNotificaciones($conn, $notificaciones);
-    }
-
     $conn->commit();
-
-    $mensaje = "$guardados partidos guardados correctamente";
-    if (!empty($notificaciones)) {
-        $mensaje .= ". Se encontraron " . count($notificaciones) . " árbitros no registrados (ver notificaciones)";
-    }
 
     echo json_encode([
         "success"   => true,
         "guardados" => $guardados,
         "total"     => count($partidos),
         "errores"   => $errores,
-        "message"   => $mensaje,
-        "notificaciones" => count($notificaciones)
+        "message"   => "$guardados partidos guardados correctamente"
     ]);
     exit;
 
@@ -151,12 +177,47 @@ function convertirFecha($f) {
 }
 
 /**
+ * Verifica si un árbitro existe en la base de datos
+ */
+function arbitroExiste(PDO $conn, $nombre) {
+    if (!$nombre) return true; // Si está vacío, no es obligatorio
+
+    $stmt = $conn->prepare("
+        SELECT idArbitro 
+        FROM arbitro 
+        WHERE nombre LIKE :n 
+        LIMIT 1
+    ");
+    $stmt->bindValue(':n', "%$nombre%", PDO::PARAM_STR);
+    $stmt->execute();
+
+    return $stmt->fetch(PDO::FETCH_COLUMN) !== false;
+}
+
+/**
+ * Busca un árbitro (asumiendo que ya existe)
+ */
+function buscarArbitro(PDO $conn, $nombre) {
+    if (!$nombre) return null;
+
+    $stmt = $conn->prepare("
+        SELECT idArbitro 
+        FROM arbitro 
+        WHERE nombre LIKE :n 
+        LIMIT 1
+    ");
+    $stmt->bindValue(':n', "%$nombre%", PDO::PARAM_STR);
+    $stmt->execute();
+
+    return $stmt->fetch(PDO::FETCH_COLUMN) ?: null;
+}
+
+/**
  * Busca un equipo, si no existe lo crea automáticamente
  */
 function buscarOCrearEquipo(PDO $conn, $nombre) {
     if (!$nombre) return null;
 
-    // Buscar primero
     $stmt = $conn->prepare("
         SELECT idEquipo 
         FROM equipo 
@@ -169,47 +230,12 @@ function buscarOCrearEquipo(PDO $conn, $nombre) {
 
     $id = $stmt->fetch(PDO::FETCH_COLUMN);
     
-    // Si existe, retornar
     if ($id !== false) {
         return $id;
     }
 
-    // Si no existe, crear
     $stmtInsert = $conn->prepare("INSERT INTO equipo (nombreEquipo) VALUES (:nombre)");
     $stmtInsert->execute([':nombre' => $nombre]);
-    
-    return $conn->lastInsertId();
-}
-
-/**
- * Busca una categoría, si no existe la crea automáticamente
- */
-function buscarOCrearCategoria(PDO $conn, $categoria) {
-    if (!$categoria) return null;
-
-    // Buscar primero
-    $stmt = $conn->prepare("
-        SELECT categoriaText
-        FROM partido
-        WHERE nombreCategoria LIKE :n
-        LIMIT 1
-    ");
-    $stmt->bindValue(':n', "%$categoria%", PDO::PARAM_STR);
-    $stmt->execute();
-
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    // Si existe, retornar
-    if ($id !== false) {
-        return $id;
-    }
-
-    // Si no existe, crear con valores por defecto
-    $stmtInsert = $conn->prepare("
-        INSERT INTO categoriaPagoArbitro (nombreCategoria, montoArbitro, montoAsistente) 
-        VALUES (:nombre, 0, 0)
-    ");
-    $stmtInsert->execute([':nombre' => $categoria]);
     
     return $conn->lastInsertId();
 }
@@ -220,7 +246,6 @@ function buscarOCrearCategoria(PDO $conn, $categoria) {
 function buscarOCrearTorneo(PDO $conn, $torneo) {
     if (!$torneo) return null;
 
-    // Buscar primero
     $stmt = $conn->prepare("
         SELECT idTorneo 
         FROM torneo 
@@ -232,65 +257,12 @@ function buscarOCrearTorneo(PDO $conn, $torneo) {
 
     $id = $stmt->fetch(PDO::FETCH_COLUMN);
     
-    // Si existe, retornar
     if ($id !== false) {
         return $id;
     }
 
-    // Si no existe, crear
     $stmtInsert = $conn->prepare("INSERT INTO torneo (nombreTorneo) VALUES (:nombre)");
     $stmtInsert->execute([':nombre' => $torneo]);
     
     return $conn->lastInsertId();
-}
-
-/**
- * Busca un árbitro, si no existe retorna NULL y agrega notificación
- */
-function buscarArbitroConNotificacion(PDO $conn, $nombre, &$notificaciones) {
-    if (!$nombre) return null;
-
-    $stmt = $conn->prepare("
-        SELECT idArbitro 
-        FROM arbitro 
-        WHERE nombre LIKE :n 
-        LIMIT 1
-    ");
-    $stmt->bindValue(':n', "%$nombre%", PDO::PARAM_STR);
-    $stmt->execute();
-
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    // Si existe, retornar
-    if ($id !== false) {
-        return $id;
-    }
-
-    // Si no existe, agregar a notificaciones (evitar duplicados)
-    if (!in_array($nombre, array_column($notificaciones, 'nombre'))) {
-        $notificaciones[] = [
-            'tipo' => 'arbitro_faltante',
-            'nombre' => $nombre,
-            'mensaje' => "El árbitro '$nombre' no está registrado en la base de datos"
-        ];
-    }
-
-    return null;
-}
-
-/**
- * Guarda las notificaciones en la tabla de notificaciones
- */
-function guardarNotificaciones(PDO $conn, $notificaciones) {
-    $stmt = $conn->prepare("
-        INSERT INTO notificaciones (titulo, mensaje) 
-        VALUES (:tipo, :mensaje)
-    ");
-
-    foreach ($notificaciones as $notif) {
-        $stmt->execute([
-            ':tipo' => $notif['tipo'],
-            ':mensaje' => $notif['mensaje']
-        ]);
-    }
 }
