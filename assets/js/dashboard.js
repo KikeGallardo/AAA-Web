@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-
-    // Capturar los botones correctos
-    const botonesEliminar = document.querySelectorAll(".eliminar-btn");
+    const botonesEliminar = document.querySelectorAll(".verelbtn");
+    const eliminarTodasBtn = document.querySelector(".eliminar-todas-btn");
 
     if (!botonesEliminar) return;
 
@@ -12,9 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const id = item.dataset.id;
 
-            // Enviar petición
             const formData = new FormData();
-            formData.append("eliminar_noti", "1");
+            formData.append("accion", "eliminar_noti");  // ✅ Cambio aquí
             formData.append("id", id);
 
             const response = await fetch("consultas.php", {
@@ -22,15 +20,44 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: formData
             });
 
-            // Si NO hay JSON, no intentes leer JSON
             if (!response.ok) {
                 alert("Error al eliminar");
                 return;
             }
 
-            // Eliminar del DOM
-            item.remove();
+            const data = await response.json();
+            
+            if (data.status === "ok") {
+                item.remove();
+                alert("Notificación eliminada");
+            } else {
+                alert("Error: " + (data.msg || "Desconocido"));
+            }
         });
     });
 
+    if (eliminarTodasBtn) {
+        eliminarTodasBtn.addEventListener("click", async () => {
+            const formData = new FormData();
+            formData.append("accion", "eliminar_todas");
+            const response = await fetch("consultas.php", {
+                method: "POST",
+                body: formData
+            });
+
+            if (!response.ok) {
+                alert("Error al eliminar todas las notificaciones");
+                return;
+            };
+            const data = await response.json();
+
+            if (data.status === "ok") {
+                document.querySelectorAll(".notificacion-item").forEach(item => item.remove());
+                alert("Todas las notificaciones eliminadas");
+            } else {
+                alert("Error: " + (data.msg || "Desconocido"));
+            }
+        });
+    }
 });
+

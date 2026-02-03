@@ -39,27 +39,22 @@
             $stmt = $conn->prepare("SELECT idNotificacion, titulo, mensaje FROM notificaciones");
             $stmt->execute();
             $result = $stmt->get_result();
-
             while ($noti = $result->fetch_assoc()):
             ?>
-                <li class="notificacion-item">
+                <li class="notificacion-item" data-id="<?php echo $noti['idNotificacion']; ?>">
                     <?php echo $noti['idNotificacion']; ?>.
-
                     <button class="verelbtn eliminar-btn">🗑️</button>
-
                     <div class="noti-texto">
                         <strong><?php echo htmlspecialchars($noti['titulo']); ?></strong>
                         <p><?php echo htmlspecialchars($noti['mensaje']); ?></p>
                     </div>
-
                 </li>
             <?php endwhile;
-
             $stmt->close();
             ?>
         </ul>
+        <button class="eliminar-todas-btn">Borrar todas</button>
     </div>
-
     <button class="logout"><a href="login.php">Cerrar sesión</a></button>
 </body>
 <?php require_once "assets/footer.php"; ?>

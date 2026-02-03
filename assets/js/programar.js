@@ -81,11 +81,11 @@ function handleFile(file) {
                 return;
             }
             
-            // Buscar la fila de encabezados (la que contiene "GRUPO", "CATEGORIA", etc.)
+            // Buscar la fila de encabezados (la que contiene, "CATEGORIA", etc.)
             let headerRowIndex = -1;
             for (let i = 0; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if (row.some(cell => cell && cell.toString().toUpperCase().includes('CATEGORÍA'))) {
+                if (row.some(cell => cell && cell.toString().toUpperCase().includes('CATEGORIA'))) {
                     headerRowIndex = i;
                     break;
                 }
@@ -95,14 +95,10 @@ function handleFile(file) {
                 showError('No se encontraron los encabezados esperados en el archivo');
                 return;
             }
-            
-            // Guardar encabezados y datos
+            // Separar encabezados y datos
             headers = jsonData[headerRowIndex];
-            allData = jsonData.slice(headerRowIndex + 1).filter(row => {
-                // Filtrar filas vacías o que son encabezados repetidos
-                return row.some(cell => cell !== '' && cell !== null) && 
-                       !row.some(cell => cell && cell.toString().toUpperCase().includes('GRUPO'));
-            });
+            allData = jsonData.slice(headerRowIndex + 1).filter(row => row.some(cell => cell !== ''));
+            
             
             // Crear tabla y filtros
             createTable(allData);
@@ -233,51 +229,9 @@ function updateCell(cell) {
     editedCells.add(`${row}-${col}`);
 }
 
-
-async function guardarPartidos() {
-    try {
-        // Enviar a PHP
-        const response = await fetch("consultas.php", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                partidos: partidosData
-            })
-        });
-        
-        const data = await response.json();
-        
-        loading.style.display = 'none';
-        
-        if (data.error) {
-            console.error("Error del servidor:", data.error);
-            showError(data.error);
-            return;
-        }
-        
-        if (data.success) {
-            successDiv.textContent = `✓ ${data.message} - ${data.guardados} partidos guardados`;
-            successDiv.style.display = 'block';
-            editedCells.clear();
-            
-            // Remover marcas de edición
-            document.querySelectorAll('.edited-cell').forEach(cell => {
-                cell.classList.remove('edited-cell');
-            });
-        } else {
-            showError(data.message || 'Error al guardar los partidos');
-        }
-        
-    } catch (error) {
-        loading.style.display = 'none';
-        showError('Error de conexión: ' + error.message);
-    }
-}
-
 /**
  * Guarda los partidos en la base de datos
+ * ✅ FUNCIÓN ÚNICA - Eliminada duplicación
  */
 async function guardarPartidos() {
     if (allData.length === 0) {
@@ -293,7 +247,7 @@ async function guardarPartidos() {
     loading.style.display = 'block';
     errorDiv.style.display = 'none';
     
-    // ✅ PRIMERO: Preparar datos para enviar
+    // Preparar datos para enviar
     const partidosData = allData.map(row => {
         const partido = {};
         headers.forEach((header, index) => {
@@ -301,10 +255,6 @@ async function guardarPartidos() {
         });
         return partido;
     });
-    
-    // ✅ DESPUÉS: Crear FormData con los datos ya preparados
-    const formData = new FormData();
-    formData.append("partidos", JSON.stringify(partidosData));
     
     try {
         // Enviar a PHP
@@ -325,6 +275,12 @@ async function guardarPartidos() {
         if (data.error) {
             console.error("Error del servidor:", data.error);
             showError(data.error);
+            
+            // Si hay árbitros faltantes, mostrarlos
+            if (data.arbitros_faltantes && data.arbitros_faltantes.length > 0) {
+                const lista = data.arbitros_faltantes.join('\n- ');
+                alert(`⚠️ ÁRBITROS FALTANTES (${data.total_faltantes}):\n\n- ${lista}\n\nPor favor, regístralos antes de continuar.`);
+            }
             return;
         }
         
@@ -337,6 +293,11 @@ async function guardarPartidos() {
             document.querySelectorAll('.edited-cell').forEach(cell => {
                 cell.classList.remove('edited-cell');
             });
+            
+            // Mostrar errores si los hay
+            if (data.errores && data.errores.length > 0) {
+                console.warn("Errores durante el guardado:", data.errores);
+            }
         } else {
             showError(data.message || 'Error al guardar los partidos');
         }
@@ -347,9 +308,7 @@ async function guardarPartidos() {
     }
 }
 
-/**
- * Exporta la tabla editada a Excel
- */
+
 function exportarExcel() {
     // Crear un nuevo workbook
     const wb = XLSX.utils.book_new();
