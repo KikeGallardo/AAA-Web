@@ -7,12 +7,11 @@ const successDiv = document.getElementById('success');
 const tableContainer = document.getElementById('tableContainer');
 const dataTable = document.getElementById('dataTable');
 const actionButtons = document.getElementById('actionButtons');
-const selectCategorias = document.getElementById("categoriasSelect");
 
 // Variables globales para los datos y filtros
 let allData = [];
 let headers = [];
-let editedCells = new Set(); // Para rastrear celdas editadas
+let editedCells = new Set();
 
 // Eventos de drag and drop
 uploadArea.addEventListener('dragover', (e) => {
@@ -42,10 +41,8 @@ fileInput.addEventListener('change', (e) => {
 
 /**
  * Procesa el archivo Excel seleccionado
- * @param {File} file - Archivo a procesar
  */
 function handleFile(file) {
-    // Validar tipo de archivo
     const validTypes = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel'
@@ -56,13 +53,11 @@ function handleFile(file) {
         return;
     }
 
-    // Mostrar loading
     loading.style.display = 'block';
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
     tableContainer.style.display = 'none';
 
-    // Leer archivo
     const reader = new FileReader();
     
     reader.onload = (e) => {
@@ -70,10 +65,7 @@ function handleFile(file) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             
-            // Obtener la primera hoja
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            
-            // Convertir a JSON
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
             
             if (jsonData.length === 0) {
@@ -81,35 +73,45 @@ function handleFile(file) {
                 return;
             }
             
-            // Buscar la fila de encabezados (la que contiene, "CATEGORIA", etc.)
+            // Buscar la fila de encabezados
             let headerRowIndex = -1;
             for (let i = 0; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if (row.some(cell => cell && cell.toString().toUpperCase().includes('CATEGORIA'))) {
+                // Buscar por varias columnas comunes
+                if (row.some(cell => {
+                    const cellStr = cell ? cell.toString().toUpperCase() : '';
+                    return cellStr.includes('CATEGORIA') || 
+                           cellStr.includes('FECHA') || 
+                           cellStr.includes('EQUIPO') ||
+                           cellStr.includes('ARBITRO');
+                })) {
                     headerRowIndex = i;
                     break;
                 }
             }
             
             if (headerRowIndex === -1) {
-                showError('No se encontraron los encabezados esperados en el archivo');
+                showError('No se encontraron los encabezados esperados en el archivo. Asegúrate de que la primera fila contenga: FECHA, CATEGORIA, EQUIPO A, etc.');
                 return;
             }
-            // Separar encabezados y datos
+
             headers = jsonData[headerRowIndex];
             allData = jsonData.slice(headerRowIndex + 1).filter(row => row.some(cell => cell !== ''));
             
+            console.log('Headers encontrados:', headers);
+            console.log('Total de partidos:', allData.length);
+            console.log('Primer partido:', allData[0]);
             
-            // Crear tabla y filtros
             createTable(allData);
             
             loading.style.display = 'none';
-            successDiv.textContent = `✓ Archivo cargado exitosamente: ${file.name} (${allData.length} partidos encontrados)`;
+            successDiv.textContent = `✓ Archivo cargado: ${file.name} (${allData.length} partidos)`;
             successDiv.style.display = 'block';
             tableContainer.style.display = 'block';
             actionButtons.style.display = 'block';
             
         } catch (error) {
+            console.error('Error al procesar:', error);
             showError('Error al procesar el archivo: ' + error.message);
         }
     };
@@ -123,8 +125,6 @@ function handleFile(file) {
 
 /**
  * Convierte el número serial de Excel a fecha
- * @param {number} serial - Número serial de Excel
- * @returns {string} - Fecha formateada
  */
 function excelDateToJSDate(serial) {
     const utc_days = Math.floor(serial - 25569);
@@ -140,8 +140,6 @@ function excelDateToJSDate(serial) {
 
 /**
  * Convierte el número decimal de Excel a hora
- * @param {number} serial - Número decimal de Excel (0.75 = 6:00 PM)
- * @returns {string} - Hora formateada
  */
 function excelTimeToJSTime(serial) {
     const hours = Math.floor(serial * 24);
@@ -154,56 +152,32 @@ function excelTimeToJSTime(serial) {
 }
 
 /**
- * Formatea una fecha si es texto en formato español
- * @param {string} dateStr - Fecha en texto
- * @returns {string} - Fecha formateada o texto original
- */
-function formatSpanishDate(dateStr) {
-    // Si ya está en formato de fecha español con día, mes y año, la devuelve tal cual
-    if (typeof dateStr === 'string' && dateStr.includes('de') && dateStr.includes('de 20')) {
-        return dateStr;
-    }
-    return dateStr;
-}
-
-/**
  * Crea una tabla HTML a partir de los datos del Excel
- * @param {Array} data - Datos en formato de array de arrays
  */
 function createTable(data) {
     let html = '<thead><tr>';
     
-    // Identificar índices de fecha y hora
     const fechaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('FECHA'));
     const horaIndex = headers.findIndex(h => h && h.toString().toUpperCase().includes('HORA'));
     
-    // Crear encabezados
     headers.forEach(header => {
         html += `<th>${header || ''}</th>`;
     });
     html += '</tr></thead><tbody>';
     
-    // Crear filas de datos
     data.forEach((row, rowIndex) => {
         html += '<tr>';
         row.forEach((cell, colIndex) => {
             let value = cell;
             
-            // Convertir fechas si son números
             if (colIndex === fechaIndex && typeof cell === 'number' && cell > 1000) {
                 value = excelDateToJSDate(cell);
             }
-            // Si la fecha es texto, mantenerla tal cual
-            else if (colIndex === fechaIndex && typeof cell === 'string') {
-                value = formatSpanishDate(cell);
-            }
             
-            // Convertir horas si son números decimales
             if (colIndex === horaIndex && typeof cell === 'number' && cell < 1) {
                 value = excelTimeToJSTime(cell);
             }
             
-            // Hacer la celda editable
             html += `<td contenteditable="true" data-row="${rowIndex}" data-col="${colIndex}" onblur="updateCell(this)">${value !== undefined && value !== null ? value : ''}</td>`;
         });
         html += '</tr>';
@@ -221,17 +195,13 @@ function updateCell(cell) {
     const col = parseInt(cell.dataset.col);
     const newValue = cell.textContent.trim();
     
-    // Actualizar el array de datos
     allData[row][col] = newValue;
-    
-    // Marcar como editada
     cell.classList.add('edited-cell');
     editedCells.add(`${row}-${col}`);
 }
 
 /**
  * Guarda los partidos en la base de datos
- * ✅ FUNCIÓN ÚNICA - Eliminada duplicación
  */
 async function guardarPartidos() {
     if (allData.length === 0) {
@@ -239,13 +209,13 @@ async function guardarPartidos() {
         return;
     }
     
-    // Confirmar antes de guardar
     if (!confirm(`¿Estás seguro de guardar ${allData.length} partidos en la base de datos?`)) {
         return;
     }
     
     loading.style.display = 'block';
     errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
     
     // Preparar datos para enviar
     const partidosData = allData.map(row => {
@@ -256,8 +226,12 @@ async function guardarPartidos() {
         return partido;
     });
     
+    console.log('Enviando datos:', {
+        total: partidosData.length,
+        primer_partido: partidosData[0]
+    });
+    
     try {
-        // Enviar a PHP
         const response = await fetch("guardar_partidos.php", {
             method: "POST",
             headers: {
@@ -268,7 +242,16 @@ async function guardarPartidos() {
             })
         });
         
-        const data = await response.json();
+        console.log('Response status:', response.status);
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            throw new Error('Respuesta no válida del servidor: ' + responseText.substring(0, 200));
+        }
         
         loading.style.display = 'none';
         
@@ -276,7 +259,6 @@ async function guardarPartidos() {
             console.error("Error del servidor:", data.error);
             showError(data.error);
             
-            // Si hay árbitros faltantes, mostrarlos
             if (data.arbitros_faltantes && data.arbitros_faltantes.length > 0) {
                 const lista = data.arbitros_faltantes.join('\n- ');
                 alert(`⚠️ ÁRBITROS FALTANTES (${data.total_faltantes}):\n\n- ${lista}\n\nPor favor, regístralos antes de continuar.`);
@@ -289,40 +271,30 @@ async function guardarPartidos() {
             successDiv.style.display = 'block';
             editedCells.clear();
             
-            // Remover marcas de edición
             document.querySelectorAll('.edited-cell').forEach(cell => {
                 cell.classList.remove('edited-cell');
             });
             
-            // Mostrar errores si los hay
             if (data.errores && data.errores.length > 0) {
                 console.warn("Errores durante el guardado:", data.errores);
+                alert("Se guardaron los partidos pero hubo algunos errores:\n\n" + data.errores.join('\n'));
             }
         } else {
             showError(data.message || 'Error al guardar los partidos');
         }
         
     } catch (error) {
+        console.error('Error completo:', error);
         loading.style.display = 'none';
         showError('Error de conexión: ' + error.message);
     }
 }
 
-
 function exportarExcel() {
-    // Crear un nuevo workbook
     const wb = XLSX.utils.book_new();
-    
-    // Crear datos con encabezados
     const wsData = [headers, ...allData];
-    
-    // Crear worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
-    // Agregar worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, "Programación");
-    
-    // Generar archivo y descargar
     XLSX.writeFile(wb, `Programacion_Editada_${new Date().getTime()}.xlsx`);
     
     successDiv.textContent = '✓ Excel exportado correctamente';
@@ -331,11 +303,13 @@ function exportarExcel() {
 
 /**
  * Muestra un mensaje de error
- * @param {string} message - Mensaje de error a mostrar
  */
 function showError(message) {
     loading.style.display = 'none';
     errorDiv.textContent = '❌ ' + message;
     errorDiv.style.display = 'block';
     successDiv.style.display = 'none';
+    
+    // Scroll hacia el error
+    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
