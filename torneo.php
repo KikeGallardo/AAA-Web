@@ -314,10 +314,10 @@ endif;
             <div class="categoria-item">
                 <input type="text" name="nombreCategoria[]" placeholder="Nombre de categoría" required maxlength="100">
                 <div class="pago-grid">
-                    <input type="number" name="pago1[]" placeholder="Pago Árbitro Principal" required min="0" step="0.01">
-                    <input type="number" name="pago2[]" placeholder="Pago Asistente 1" min="0" step="0.01">
-                    <input type="number" name="pago3[]" placeholder="Pago Asistente 2" min="0" step="0.01">
-                    <input type="number" name="pago4[]" placeholder="Pago Cuarto Árbitro" min="0" step="0.01">
+                    <input type="number" name="pago1[]" placeholder="Pago Árbitro Principal" required step="0.01">
+                    <input type="number" name="pago2[]" placeholder="Pago Asistente 1" step="0.01">
+                    <input type="number" name="pago3[]" placeholder="Pago Asistente 2" step="0.01">
+                    <input type="number" name="pago4[]" placeholder="Pago Cuarto Árbitro" step="0.01">
                 </div>
                 <button type="button" class="btn-remove" onclick="removeCategoria(this)">Eliminar</button>
             </div>
@@ -432,10 +432,10 @@ endif;
                        style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
             </div>
             <div class="pago-grid">
-                <input type="number" name="pago1" placeholder="Pago Árbitro Principal" required min="0" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
-                <input type="number" name="pago2" placeholder="Pago Asistente 1" min="0" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
-                <input type="number" name="pago3" placeholder="Pago Asistente 2" min="0" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
-                <input type="number" name="pago4" placeholder="Pago Cuarto Árbitro" min="0" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
+                <input type="number" name="pago1" placeholder="Pago Árbitro Principal" required step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
+                <input type="number" name="pago2" placeholder="Pago Asistente 1" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
+                <input type="number" name="pago3" placeholder="Pago Asistente 2" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
+                <input type="number" name="pago4" placeholder="Pago Cuarto Árbitro" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
             </div>
             <button type="submit" class="btn-registrar" style="margin-top:1rem;">Agregar Categoría</button>
         </form>
@@ -455,10 +455,10 @@ endif;
                        style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
             </div>
             <div class="pago-grid">
-                <input type="number" name="pago1Edit" id="editCat_p1" placeholder="Pago 1" required min="0" step="0.01">
-                <input type="number" name="pago2Edit" id="editCat_p2" placeholder="Pago 2" min="0" step="0.01">
-                <input type="number" name="pago3Edit" id="editCat_p3" placeholder="Pago 3" min="0" step="0.01">
-                <input type="number" name="pago4Edit" id="editCat_p4" placeholder="Pago 4" min="0" step="0.01">
+                <input type="number" name="pago1Edit" id="editCat_p1" placeholder="Pago 1" required step="0.01">
+                <input type="number" name="pago2Edit" id="editCat_p2" placeholder="Pago 2"  step="0.01">
+                <input type="number" name="pago3Edit" id="editCat_p3" placeholder="Pago 3"  step="0.01">
+                <input type="number" name="pago4Edit" id="editCat_p4" placeholder="Pago 4"  step="0.01">
             </div>
             <div style="display:flex; gap:10px; margin-top:1rem;">
                 <button type="submit" class="btn-registrar">Guardar Cambios</button>
@@ -531,10 +531,10 @@ function addCategoria() {
     <div class="categoria-item">
         <input type="text" name="nombreCategoria[]" placeholder="Nombre de categoría" required maxlength="100">
         <div class="pago-grid">
-            <input type="number" name="pago1[]" placeholder="Pago Árbitro Principal" required min="0" step="0.01">
-            <input type="number" name="pago2[]" placeholder="Pago Asistente 1" min="0" step="0.01">
-            <input type="number" name="pago3[]" placeholder="Pago Asistente 2" min="0" step="0.01">
-            <input type="number" name="pago4[]" placeholder="Pago Cuarto Árbitro" min="0" step="0.01">
+            <input type="number" name="pago1[]" placeholder="Pago Árbitro Principal" required  step="0.01">
+            <input type="number" name="pago2[]" placeholder="Pago Asistente 1" step="0.01">
+            <input type="number" name="pago3[]" placeholder="Pago Asistente 2" step="0.01">
+            <input type="number" name="pago4[]" placeholder="Pago Cuarto Árbitro" step="0.01">
         </div>
         <button type="button" class="btn-remove" onclick="removeCategoria(this)">Eliminar</button>
     </div>`;
