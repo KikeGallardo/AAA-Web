@@ -171,9 +171,36 @@ $cedula         = $arbitroInfo['cedula'];
 <style>
 /* ── IMPRESIÓN ── */
 @media print {
+
     .no-print { display:none !important; }
-    body { margin:0; padding:0; background:white; }
-    @page { margin:8mm 10mm; size:letter portrait; }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+
+    /* Margen inferior grande para reservar espacio del footer */
+    @page {
+        size: letter portrait;
+        margin: 10mm 10mm 10mm 10mm;
+    } 
+
+    /* Footer repetido en cada página */
+    .footer-print {
+        position: fixed;
+        bottom: 0;
+        left: 10mm;
+        right: 10mm;
+        margin-top: 30mm;
+    }
+
+    /* Contenido nunca invade el footer */
+    .hoja {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        box-shadow: none;
+    }
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -402,16 +429,16 @@ body {
         <span class="arb-nombre"><?= h($nombreCompleto) ?></span>
     </div>
     <div class="arb-row">
-        <span style="font-size:16px;">CAT: <?= h($categoria) ?></span>
+        <span style="font-size:14px;">CAT: <?= h($categoria) ?></span>
         <span class="arb-datos">
-            <span style="font-size:18px;">Cédula: <?= h($cedula) ?></span>
+            <span style="font-size:14px;">Cédula: <?= h($cedula) ?></span>
         </span>
     </div>
 
     <!-- CONCEPTO -->
     <div class="concepto">
         
-        <h2>CUENTA DE COBRO:</h2>
+        <h3>CUENTA DE COBRO:</h3>
     </div>
 
     <!-- ── CUADROS ── -->
@@ -500,8 +527,9 @@ body {
     </div><!-- /cuadro -->
     <?php endforeach; ?>
 
+</div><!-- /hoja -->
     <!-- TOTAL FINAL -->
-    <div class="total-bloque">
+    <div class="total-bloque footer-print">
         <div class="total-fila">
             <div class="tf-firma">Firma y Cédula de Árbitro</div>
             <div class="tf-total-lbl">TOTAL</div>
@@ -513,7 +541,6 @@ body {
         </div>
     </div>
 
-</div><!-- /hoja -->
 
 </body>
 </html>
