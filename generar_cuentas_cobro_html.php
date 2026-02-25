@@ -162,6 +162,7 @@ $totalPartidos  = count($partidos_data);
 $nombreCompleto = strtoupper($arbitroInfo['nombre'].' '.$arbitroInfo['apellido']);
 $categoria      = strtoupper($arbitroInfo['categoriaArbitro'] ?? '');
 $cedula         = $arbitroInfo['cedula'];
+$tipoPago       = $categoria === 'PRIMERA' ? 'PAGO INMEDIATO' : 'PAGO 15 DÍAS';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -462,7 +463,7 @@ body {
                 <div class="val negrita"><?= h($p['rol']) ?></div>
                 <div class="col-der">
                 <div class="lbl">Tarifa:</div>
-                <div class="val negrita">$<?= number_format($p['tarifa'],0,',','.') + 1000000 ?></div>
+                <div class="val negrita">$<?= number_format($p['tarifa'],0,',','.')?></div>
             </div>
             </div>
         </div>
@@ -526,9 +527,7 @@ body {
 
     </div><!-- /cuadro -->
     <?php endforeach; ?>
-
-</div><!-- /hoja -->
-    <!-- TOTAL FINAL -->
+    
     <div class="total-bloque footer-print">
         <div class="total-fila">
             <div class="tf-firma">Firma y Cédula de Árbitro</div>
@@ -540,6 +539,8 @@ body {
             <div class="tf-aut">Autorizada</div>
         </div>
     </div>
+</div><!-- /hoja -->
+    <!-- TOTAL FINAL -->
 
 
 </body>
