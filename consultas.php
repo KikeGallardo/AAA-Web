@@ -387,9 +387,91 @@ switch ($accion) {
         'torneos_nombre' => $torneos_nombre
     ]);
     break;
+// ── REGISTRAR IMPRESIÓN ──────────────────────────────────────
+    // Incrementa en 1 el contador del árbitro y guarda la fecha.
+    // Llamado automáticamente al abrir generar_cuentas_cobro_html.php
+    case 'registrar_impresion':
+        $idArbitro = isset($_POST['idArbitro']) ? (int)$_POST['idArbitro'] : 0;
 
+        if ($idArbitro <= 0) {
+            echo json_encode(['status' => 'error', 'msg' => 'ID inválido']);
+            exit;
+        }
 
+        // INSERT ... ON DUPLICATE KEY UPDATE  → upsert atómico
+        $stmt = $conn->prepare("
+            INSERT INTO contador_impresion (idArbitro, totalImpresiones, ultimaImpresion)
+            VALUES (?, 1, NOW())
+            ON DUPLICATE KEY UPDATE
+                totalImpresiones = totalImpresiones + 1,
+                ultimaImpresion  = NOW()
+        ");
+        $stmt->bind_param("i", $idArbitro);
 
+        if ($stmt->execute()) {
+            // Devolver el total actualizado
+            $stmt2 = $conn->prepare("
+                SELECT totalImpresiones FROM contador_impresion WHERE idArbitro = ?
+            ");
+            $stmt2->bind_param("i", $idArbitro);
+            $stmt2->execute();
+            $total = (int)$stmt2->get_result()->fetch_assoc()['totalImpresiones'];
+            $stmt2->close();
 
-}
+            echo json_encode(['status' => 'ok', 'total' => $total]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => $stmt->error]);
+        }
+        $stmt->close();
+        break;
+
+    // ── OBTENER CONTADOR ─────────────────────────────────────────
+    // Devuelve el total actual de impresiones de un árbitro.
+    case 'obtener_contador':
+        $idArbitro = isset($_POST['idArbitro']) ? (int)$_POST['idArbitro'] : 0;
+
+        if ($idArbitro <= 0) {
+            echo json_encode(['total' => 0]);
+            exit;
+        }
+
+        $stmt = $conn->prepare("
+            SELECT totalImpresiones FROM contador_impresion WHERE idArbitro = ?
+        ");
+        $stmt->bind_param("i", $idArbitro);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        echo json_encode(['total' => $row ? (int)$row['totalImpresiones'] : 0]);
+        break;
+
+    // ── AJUSTAR CONTADOR ─────────────────────────────────────────
+    // Permite corregir manualmente el valor del contador.
+    case 'ajustar_contador':
+        $idArbitro = isset($_POST['idArbitro']) ? (int)$_POST['idArbitro']  : 0;
+        $nuevo     = isset($_POST['nuevo'])     ? (int)$_POST['nuevo']      : -1;
+
+        if ($idArbitro <= 0 || $nuevo < 0) {
+            echo json_encode(['status' => 'error', 'msg' => 'Valores inválidos']);
+            exit;
+        }
+
+        $stmt = $conn->prepare("
+            INSERT INTO contador_impresion (idArbitro, totalImpresiones, ultimaImpresion)
+            VALUES (?, ?, NOW())
+            ON DUPLICATE KEY UPDATE
+                totalImpresiones = ?,
+                ultimaImpresion  = NOW()
+        ");
+        $stmt->bind_param("iii", $idArbitro, $nuevo, $nuevo);
+
+        if ($stmt->execute()) {
+            echo json_encode(['status' => 'ok', 'total' => $nuevo]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => $stmt->error]);
+        }
+        $stmt->close();
+        break;
+    }
 ?>

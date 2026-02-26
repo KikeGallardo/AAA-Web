@@ -22,44 +22,38 @@ if (isset($_POST['registrarTorneo'])) {
             $idTorneo = $stmt->insert_id;
             $stmt->close();
 
-            // Leer arrays de categorías
-            $nombres = $_POST['nombreCategoria'] ?? [];
-            $p1 = $_POST['pago1'] ?? [];
-            $p2 = $_POST['pago2'] ?? [];
-            $p3 = $_POST['pago3'] ?? [];
-            $p4 = $_POST['pago4'] ?? [];
+            // Leer arrays de categorías — movido al bloque de inserción
 
-            // Preparar statements para categorías
+            // Preparar statement para categorías (incluye idTorneo y tipopago directamente)
             $insCat = $conexion->prepare(
-                "INSERT INTO categoriaPagoArbitro (nombreCategoria, pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4) 
-                 VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO categoriaPagoArbitro (idTorneo, nombreCategoria, pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4, tipopago) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
-            $insRel = $conexion->prepare(
-                "INSERT INTO torneo_categoria (idTorneo, idCategoriaPagoArbitro) VALUES (?, ?)"
-            );
+
+            $nombres   = $_POST['nombreCategoria'] ?? [];
+            $p1        = $_POST['pago1'] ?? [];
+            $p2        = $_POST['pago2'] ?? [];
+            $p3        = $_POST['pago3'] ?? [];
+            $p4        = $_POST['pago4'] ?? [];
+            $tiposPago = $_POST['tipopago'] ?? [];
 
             $categoriaCount = 0;
             for ($i = 0; $i < count($nombres); $i++) {
                 $nc = trim($nombres[$i]);
                 if ($nc === '') continue;
 
-                $pg1 = max(0, (int)($p1[$i] ?? 0));
-                $pg2 = max(0, (int)($p2[$i] ?? 0));
-                $pg3 = max(0, (int)($p3[$i] ?? 0));
-                $pg4 = max(0, (int)($p4[$i] ?? 0));
+                $pg1 = (int)($p1[$i] ?? 0);
+                $pg2 = (int)($p2[$i] ?? 0);
+                $pg3 = (int)($p3[$i] ?? 0);
+                $pg4 = (int)($p4[$i] ?? 0);
+                $tp  = in_array($tiposPago[$i] ?? '', ['INMEDIATO', 'QUINCENAL']) ? $tiposPago[$i] : 'INMEDIATO';
 
-                $insCat->bind_param("siiii", $nc, $pg1, $pg2, $pg3, $pg4);
+                $insCat->bind_param("isiiiis", $idTorneo, $nc, $pg1, $pg2, $pg3, $pg4, $tp);
                 $insCat->execute();
-                $idCategoria = $insCat->insert_id;
-
-                $insRel->bind_param("ii", $idTorneo, $idCategoria);
-                $insRel->execute();
-                
                 $categoriaCount++;
             }
 
             $insCat->close();
-            $insRel->close();
 
             $conexion->commit();
             $_SESSION['mensaje'] = [
@@ -81,37 +75,28 @@ if (isset($_POST['registrarTorneo'])) {
 // ----------------------
 if (isset($_POST['agregarCategoria'])) {
     $idTorneo = (int)($_POST['idTorneo'] ?? 0);
-    $nombre = trim($_POST['nombreCategoria'] ?? '');
-    $p1 = max(0, (int)($_POST['pago1'] ?? 0));
-    $p2 = max(0, (int)($_POST['pago2'] ?? 0));
-    $p3 = max(0, (int)($_POST['pago3'] ?? 0));
-    $p4 = max(0, (int)($_POST['pago4'] ?? 0));
+    $nombre   = trim($_POST['nombreCategoria'] ?? '');
+    $p1       = (int)($_POST['pago1'] ?? 0);
+    $p2       = (int)($_POST['pago2'] ?? 0);
+    $p3       = (int)($_POST['pago3'] ?? 0);
+    $p4       = (int)($_POST['pago4'] ?? 0);
+    $tipopago = in_array($_POST['tipopago'] ?? '', ['INMEDIATO', 'QUINCENAL']) ? $_POST['tipopago'] : '';
 
-    if ($idTorneo <= 0 || $nombre === '') {
-        echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
+    if ($idTorneo <= 0 || $nombre === '' || $tipopago === '') {
+        echo json_encode(['success' => false, 'message' => 'Datos inválidos o tipo de pago no seleccionado']);
         exit;
     }
 
-    $conexion->begin_transaction();
     try {
         $stmt = $conexion->prepare(
-            "INSERT INTO categoriaPagoArbitro (nombreCategoria, pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4) 
-             VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO categoriaPagoArbitro (idTorneo, nombreCategoria, pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4, tipopago) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
-        $stmt->bind_param("siiii", $nombre, $p1, $p2, $p3, $p4);
+        $stmt->bind_param("isiiiis", $idTorneo, $nombre, $p1, $p2, $p3, $p4, $tipopago);
         $stmt->execute();
-        $idCategoria = $stmt->insert_id;
         $stmt->close();
-
-        $stmt2 = $conexion->prepare("INSERT INTO torneo_categoria (idTorneo, idCategoriaPagoArbitro) VALUES (?, ?)");
-        $stmt2->bind_param("ii", $idTorneo, $idCategoria);
-        $stmt2->execute();
-        $stmt2->close();
-
-        $conexion->commit();
         echo json_encode(['success' => true, 'message' => 'Categoría agregada correctamente']);
     } catch (Exception $e) {
-        $conexion->rollback();
         error_log("Error al agregar categoría: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Error al agregar categoría']);
     }
@@ -161,27 +146,29 @@ if (isset($_POST['editarTorneo'])) {
 // 5) EDITAR CATEGORÍA
 // ----------------------
 if (isset($_POST['editarCategoria'])) {
-    $idCat = (int)($_POST['idCategoria'] ?? 0);
+    $idCat     = (int)($_POST['idCategoria'] ?? 0);
     $nombreCat = trim($_POST['nombreCategoriaEdit'] ?? '');
-    $pg1 = max(0, (int)($_POST['pago1Edit'] ?? 0));
-    $pg2 = max(0, (int)($_POST['pago2Edit'] ?? 0));
-    $pg3 = max(0, (int)($_POST['pago3Edit'] ?? 0));
-    $pg4 = max(0, (int)($_POST['pago4Edit'] ?? 0));
+    $pg1       = (int)($_POST['pago1Edit'] ?? 0);
+    $pg2       = (int)($_POST['pago2Edit'] ?? 0);
+    $pg3       = (int)($_POST['pago3Edit'] ?? 0);
+    $pg4       = (int)($_POST['pago4Edit'] ?? 0);
+    $tipopago  = in_array($_POST['tipopagoEdit'] ?? '', ['INMEDIATO', 'QUINCENAL']) ? $_POST['tipopagoEdit'] : '';
 
-    if ($idCat > 0 && $nombreCat !== '') {
+    if ($idCat > 0 && $nombreCat !== '' && $tipopago !== '') {
         $stmt = $conexion->prepare(
             "UPDATE categoriaPagoArbitro
-             SET nombreCategoria=?, pagoArbitro1=?, pagoArbitro2=?, pagoArbitro3=?, pagoArbitro4=? 
+             SET nombreCategoria=?, pagoArbitro1=?, pagoArbitro2=?, pagoArbitro3=?, pagoArbitro4=?, tipopago=?
              WHERE idCategoriaPagoArbitro=?"
         );
-        $stmt->bind_param("siiiii", $nombreCat, $pg1, $pg2, $pg3, $pg4, $idCat);
-        
+        $stmt->bind_param("siiiisi", $nombreCat, $pg1, $pg2, $pg3, $pg4, $tipopago, $idCat);
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Categoría actualizada']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Error al actualizar']);
         }
         $stmt->close();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Datos inválidos o tipo de pago no seleccionado']);
     }
     exit;
 }
@@ -192,27 +179,14 @@ if (isset($_POST['editarCategoria'])) {
 if (isset($_POST['eliminarCategoria'])) {
     $idCat = (int)($_POST['idCategoria'] ?? 0);
     if ($idCat > 0) {
-        $conexion->begin_transaction();
-        try {
-            // Eliminar relaciones
-            $stmt1 = $conexion->prepare("DELETE FROM torneo_categoria WHERE idCategoriaPagoArbitro = ?");
-            $stmt1->bind_param("i", $idCat);
-            $stmt1->execute();
-            $stmt1->close();
-            
-            // Eliminar categoría
-            $stmt2 = $conexion->prepare("DELETE FROM categoriaPagoArbitro WHERE idCategoriaPagoArbitro = ?");
-            $stmt2->bind_param("i", $idCat);
-            $stmt2->execute();
-            $stmt2->close();
-            
-            $conexion->commit();
+        $stmt = $conexion->prepare("DELETE FROM categoriaPagoArbitro WHERE idCategoriaPagoArbitro = ?");
+        $stmt->bind_param("i", $idCat);
+        if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Categoría eliminada']);
-        } catch (Exception $e) {
-            $conexion->rollback();
-            error_log("Error al eliminar categoría: " . $e->getMessage());
+        } else {
             echo json_encode(['success' => false, 'message' => 'Error al eliminar']);
         }
+        $stmt->close();
     }
     exit;
 }
@@ -246,12 +220,14 @@ $totalRegistros = (int)$totalQuery->get_result()->fetch_assoc()['total'];
 $totalPaginas = max(1, ceil($totalRegistros / $registrosPorPagina));
 $totalQuery->close();
 
-// Listado con conteo de categorías
+// Listado con conteo de categorías y partidos
 $sql = "
     SELECT t.idTorneo, t.nombreTorneo, 
-           COUNT(tc.idCategoriaPagoArbitro) AS categorias
+           COUNT(DISTINCT c.idCategoriaPagoArbitro) AS categorias,
+           COUNT(DISTINCT p.idPartido) AS partidos
     FROM torneo t
-    LEFT JOIN torneo_categoria tc ON tc.idTorneo = t.idTorneo
+    LEFT JOIN categoriaPagoArbitro c ON c.idTorneo = t.idTorneo
+    LEFT JOIN partido p ON p.idTorneoPartido = t.idTorneo
     $where
     GROUP BY t.idTorneo
     ORDER BY t.idTorneo DESC
@@ -319,6 +295,11 @@ endif;
                     <input type="number" name="pago3[]" placeholder="Pago Asistente 2" step="0.01">
                     <input type="number" name="pago4[]" placeholder="Pago Cuarto Árbitro" step="0.01">
                 </div>
+                <select name="tipopago[]" required class="tipopago-select">
+                    <option value="" disabled selected>Tipo de pago *</option>
+                    <option value="INMEDIATO">PAGO INMEDIATO</option>
+                    <option value="QUINCENAL">PAGO QUINCENAL</option>
+                </select>
                 <button type="button" class="btn-remove" onclick="removeCategoria(this)">Eliminar</button>
             </div>
         </div>
@@ -342,9 +323,9 @@ endif;
 <table class="cuerpoTabla">
     <thead>
         <tr>
-            <th>ID</th>
             <th>Torneo</th>
             <th>Categorías</th>
+            <th>Partidos</th>
             <th>Acciones</th>
         </tr>
     </thead>
@@ -354,9 +335,9 @@ endif;
     <?php else: ?>
         <?php while ($t = $torneos->fetch_assoc()): ?>
         <tr>
-            <td><?= h($t['idTorneo']) ?></td>
             <td><?= h($t['nombreTorneo']) ?></td>
             <td><?= h($t['categorias']) ?></td>
+            <td><?= h($t['partidos']) ?></td>
             <td class="botonesfile">
                 <button type="button" class="btn-editar" onclick="openEditarTorneo(<?= (int)$t['idTorneo'] ?>, '<?= h(addslashes($t['nombreTorneo'])) ?>')" title="Editar">
                     <i class="material-icons">edit</i>
@@ -437,6 +418,11 @@ endif;
                 <input type="number" name="pago3" placeholder="Pago Asistente 2" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
                 <input type="number" name="pago4" placeholder="Pago Cuarto Árbitro" step="0.01" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px;">
             </div>
+            <select name="tipopago" required class="tipopago-select" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px; margin-top:0.75rem;">
+                <option value="" disabled selected>Tipo de pago *</option>
+                <option value="INMEDIATO">PAGO INMEDIATO</option>
+                <option value="QUINCENAL">PAGO QUINCENAL</option>
+            </select>
             <button type="submit" class="btn-registrar" style="margin-top:1rem;">Agregar Categoría</button>
         </form>
     </div>
@@ -456,10 +442,15 @@ endif;
             </div>
             <div class="pago-grid">
                 <input type="number" name="pago1Edit" id="editCat_p1" placeholder="Pago 1" required step="0.01">
-                <input type="number" name="pago2Edit" id="editCat_p2" placeholder="Pago 2"  step="0.01">
-                <input type="number" name="pago3Edit" id="editCat_p3" placeholder="Pago 3"  step="0.01">
-                <input type="number" name="pago4Edit" id="editCat_p4" placeholder="Pago 4"  step="0.01">
+                <input type="number" name="pago2Edit" id="editCat_p2" placeholder="Pago 2" step="0.01">
+                <input type="number" name="pago3Edit" id="editCat_p3" placeholder="Pago 3" step="0.01">
+                <input type="number" name="pago4Edit" id="editCat_p4" placeholder="Pago 4" step="0.01">
             </div>
+            <select name="tipopagoEdit" id="editCat_tipopago" required class="tipopago-select" style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px; margin-top:0.75rem;">
+                <option value="" disabled>Tipo de pago *</option>
+                <option value="INMEDIATO">PAGO INMEDIATO</option>
+                <option value="QUINCENAL">PAGO QUINCENAL</option>
+            </select>
             <div style="display:flex; gap:10px; margin-top:1rem;">
                 <button type="submit" class="btn-registrar">Guardar Cambios</button>
                 <button type="button" class="btn-cancelar" onclick="closeModal('modalEditarCategoria')">Cancelar</button>
@@ -531,11 +522,16 @@ function addCategoria() {
     <div class="categoria-item">
         <input type="text" name="nombreCategoria[]" placeholder="Nombre de categoría" required maxlength="100">
         <div class="pago-grid">
-            <input type="number" name="pago1[]" placeholder="Pago Árbitro Principal" required  step="0.01">
+            <input type="number" name="pago1[]" placeholder="Pago Árbitro Principal" required step="0.01">
             <input type="number" name="pago2[]" placeholder="Pago Asistente 1" step="0.01">
             <input type="number" name="pago3[]" placeholder="Pago Asistente 2" step="0.01">
             <input type="number" name="pago4[]" placeholder="Pago Cuarto Árbitro" step="0.01">
         </div>
+        <select name="tipopago[]" required class="tipopago-select">
+            <option value="" disabled selected>Tipo de pago *</option>
+            <option value="INMEDIATO">PAGO INMEDIATO</option>
+            <option value="QUINCENAL">PAGO QUINCENAL</option>
+        </select>
         <button type="button" class="btn-remove" onclick="removeCategoria(this)">Eliminar</button>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
@@ -618,13 +614,15 @@ function agregarCategoria(event) {
     });
 }
 
-function editarCategoria(id, nombre, p1, p2, p3, p4) {
+function editarCategoria(id, nombre, p1, p2, p3, p4, tipopago) {
     document.getElementById('editCat_id').value = id;
     document.getElementById('editCat_nombre').value = nombre.replace(/\\'/g, "'");
     document.getElementById('editCat_p1').value = p1;
     document.getElementById('editCat_p2').value = p2;
     document.getElementById('editCat_p3').value = p3;
     document.getElementById('editCat_p4').value = p4;
+    const sel = document.getElementById('editCat_tipopago');
+    sel.value = tipopago || '';
     openModal('modalEditarCategoria');
 }
 

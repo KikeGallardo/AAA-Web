@@ -20,36 +20,20 @@
         <div class="contenedorPrincipal">
             <div>
                 <div id="listaCategorias" class="lista-categorias">
-                    <!-- Lista desplegable de categorias con la opción de crear más-->
-                    <select id="categoriasSelect" class="categorias-select">
+                    <select id="torneoSelect" class="categorias-select" required>
                         <option value="" disabled selected>Selecciona un torneo</option>
 
                         <?php
-                        // Consulta correcta (id + nombre)
                         $stmt = $conn->prepare("SELECT idTorneo, nombreTorneo FROM torneo ORDER BY idTorneo DESC");
                         $stmt->execute();
                         $result = $stmt->get_result();
-
-                        // Recorrer todos los torneos
                         while ($torneo = $result->fetch_assoc()): ?>
-                            <option value="<?php echo $torneo['idTorneo']; ?>">
+                            <option value="<?php echo $torneo['idTorneo']; ?>" data-nombre="<?php echo htmlspecialchars($torneo['nombreTorneo']); ?>">
                                 <?php echo htmlspecialchars($torneo['nombreTorneo']); ?>
                             </option>
                         <?php endwhile;
-
                         $stmt->close();
                         ?>
-                    </select>
-                </div>
-            </div>
-            <div>
-                <div id="listaPago" class="lista-categorias">
-                    <!-- Lista desplegable de categorias con la opción de pago-->
-                    <select id="pagoSelect" class="categorias-select">
-                        <option value="" disabled selected>Programación de Pago</option>
-                        <option value="">Pago inmediato</option>
-                        <option value="">pago a quincena</option>
-                        <option value="">Pago a plazos</option>
                     </select>
                 </div>
             </div>
@@ -90,4 +74,3 @@
         <script src="assets/js/xlsx.full.min.js"></script>
         <script src="assets/js/programar.js"></script>
     </main>
-    

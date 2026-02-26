@@ -28,6 +28,7 @@ uploadArea.addEventListener('drop', (e) => {
     uploadArea.classList.remove('drag-over');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
+        if (!torneoSeleccionado()) return;
         handleFile(files[0]);
     }
 });
@@ -35,9 +36,20 @@ uploadArea.addEventListener('drop', (e) => {
 // Evento de selección de archivo
 fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
+        if (!torneoSeleccionado()) return;
         handleFile(e.target.files[0]);
     }
 });
+
+function torneoSeleccionado() {
+    const select = document.getElementById('torneoSelect');
+    if (!select.value) {
+        showError('Debes seleccionar un torneo antes de cargar el archivo.');
+        select.focus();
+        return false;
+    }
+    return true;
+}
 
 /**
  * Procesa el archivo Excel seleccionado
@@ -218,6 +230,10 @@ async function guardarPartidos() {
     successDiv.style.display = 'none';
     
     // Preparar datos para enviar
+    const torneoSelect = document.getElementById('torneoSelect');
+    const idTorneo = torneoSelect.value;
+    const nombreTorneo = torneoSelect.options[torneoSelect.selectedIndex].dataset.nombre;
+
     const partidosData = allData.map(row => {
         const partido = {};
         headers.forEach((header, index) => {
@@ -238,6 +254,8 @@ async function guardarPartidos() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
+                idTorneo: idTorneo,
+                nombreTorneo: nombreTorneo,
                 partidos: partidosData
             })
         });
@@ -263,6 +281,12 @@ async function guardarPartidos() {
                 const lista = data.arbitros_faltantes.join('\n- ');
                 alert(`⚠️ ÁRBITROS FALTANTES (${data.total_faltantes}):\n\n- ${lista}\n\nPor favor, regístralos antes de continuar.`);
             }
+
+            if (data.categorias_faltantes && data.categorias_faltantes.length > 0) {
+                const lista = data.categorias_faltantes.join('\n- ');
+                alert(`⚠️ CATEGORÍAS NO ENCONTRADAS (${data.categorias_faltantes.length}):\n\n- ${lista}\n\nCreá estas categorías primero y luego volvé a intentarlo.`);
+            }
+
             return;
         }
         

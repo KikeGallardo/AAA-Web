@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// Acepta tanto POST (formulario viejo) como GET (links nuevos desde impresion.php)
 $req = array_merge($_GET, $_POST);
 
 if (!isset($req['fechaInicio']) || !isset($req['fechaFin']) || !isset($req['arbitro'])) {
@@ -13,7 +12,6 @@ $fechaInicio = $req['fechaInicio'];
 $fechaFin    = $req['fechaFin'];
 $idArbitro   = (int)$req['arbitro'];
 
-// Torneos: puede venir como array (torneos[]) o como idTorneo simple
 $torneosIds = [];
 if (!empty($req['torneos'])) {
     $torneosIds = array_map('intval', (array)$req['torneos']);
@@ -24,7 +22,6 @@ if (!empty($req['torneos'])) {
 
 $conexion = getDBConnection();
 
-// Filtro de torneos dinámico
 $whereTorneo = '';
 $extraTypes  = '';
 $extraValues = [];
@@ -50,6 +47,7 @@ $sql = "
         cp.pagoArbitro2,
         cp.pagoArbitro3,
         cp.pagoArbitro4,
+        cp.tipopago,
         a1.idArbitro AS idArbitro1,
         a1.nombre    AS nombreArbitro1,
         a1.apellido  AS apellidoArbitro1,
@@ -64,14 +62,14 @@ $sql = "
         a4.nombre    AS nombreArbitro4,
         a4.apellido  AS apellidoArbitro4
     FROM partido p
-    INNER JOIN equipo e1              ON p.idEquipo1              = e1.idEquipo
-    INNER JOIN equipo e2              ON p.idEquipo2              = e2.idEquipo
-    INNER JOIN torneo t               ON p.idTorneoPartido        = t.idTorneo
+    INNER JOIN equipo e1               ON p.idEquipo1              = e1.idEquipo
+    INNER JOIN equipo e2               ON p.idEquipo2              = e2.idEquipo
+    INNER JOIN torneo t                ON p.idTorneoPartido        = t.idTorneo
     INNER JOIN categoriaPagoArbitro cp ON p.idCategoriaPagoArbitro = cp.idCategoriaPagoArbitro
-    LEFT  JOIN arbitro a1             ON p.idArbitro1             = a1.idArbitro
-    LEFT  JOIN arbitro a2             ON p.idArbitro2             = a2.idArbitro
-    LEFT  JOIN arbitro a3             ON p.idArbitro3             = a3.idArbitro
-    LEFT  JOIN arbitro a4             ON p.idArbitro4             = a4.idArbitro
+    LEFT  JOIN arbitro a1              ON p.idArbitro1             = a1.idArbitro
+    LEFT  JOIN arbitro a2              ON p.idArbitro2             = a2.idArbitro
+    LEFT  JOIN arbitro a3              ON p.idArbitro3             = a3.idArbitro
+    LEFT  JOIN arbitro a4              ON p.idArbitro4             = a4.idArbitro
     WHERE p.fecha BETWEEN ? AND ?
       AND (p.idArbitro1 = ? OR p.idArbitro2 = ? OR p.idArbitro3 = ? OR p.idArbitro4 = ?)
     $whereTorneo
@@ -94,11 +92,27 @@ if ($partidos->num_rows === 0) {
          </div>');
 }
 
-// Info del árbitro (incluye categoriaArbitro)
-$stmtArbitro = $conexion->prepare("SELECT nombre, apellido, cedula, categoriaArbitro FROM arbitro WHERE idArbitro = ?");
+// ── Info del árbitro ──
+// categoriaArbitro es un varchar con texto (ej: "PRINCIPAL"), no una FK.
+// NO hacer JOIN con categoriaPagoArbitro. El tipopago viene de cada partido.
+$stmtArbitro = $conexion->prepare(
+    "SELECT nombre, apellido, cedula, categoriaArbitro
+     FROM arbitro
+     WHERE idArbitro = ?"
+);
 $stmtArbitro->bind_param('i', $idArbitro);
 $stmtArbitro->execute();
-$arbitroInfo = $stmtArbitro->get_result()->fetch_assoc();
+$arbitroInfo = $stmtArbitro->get_result()->fetch_assoc() ?? [];
+
+$stmtContador = $conexion->prepare("
+    SELECT COALESCE(totalImpresiones, 0) AS totalImpresiones
+    FROM contador_impresion
+    WHERE idArbitro = ?
+");
+$stmtContador->bind_param('i', $idArbitro);
+$stmtContador->execute();
+$contadorInfo     = $stmtContador->get_result()->fetch_assoc();
+$totalImpresiones = $contadorInfo['totalImpresiones'] ?? 0;
 
 function formatearFecha($fecha) {
     $meses = [1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',
@@ -109,38 +123,37 @@ function formatearFecha($fecha) {
 }
 
 function formatearHora($hora) {
-    $ts = strtotime($hora);
-    return date('g:i A', $ts);
+    return date('g:i A', strtotime($hora));
 }
 
-// Preparar partidos
+$tipoPagoLabels = ['inmediato' => 'Pago Inmediato', 'quincenal' => 'Pago Quincenal'];
+
+// ── Preparar partidos ──
 $partidos_data = [];
 $totalPagar    = 0;
 
 while ($partido = $partidos->fetch_assoc()) {
     $rol = ''; $tarifa = 0;
-    $arbitroPpal = ''; $asistente1 = ''; $asistente2 = ''; $emergente = '';
 
-    $n1 = trim(($partido['nombreArbitro1']??'').' '.($partido['apellidoArbitro1']??''));
-    $n2 = $partido['nombreArbitro2'] ? trim($partido['nombreArbitro2'].' '.$partido['apellidoArbitro2']) : '';
-    $n3 = $partido['nombreArbitro3'] ? trim($partido['nombreArbitro3'].' '.$partido['apellidoArbitro3']) : '';
-    $n4 = $partido['nombreArbitro4'] ? trim($partido['nombreArbitro4'].' '.$partido['apellidoArbitro4']) : '';
+    $n1 = trim(($partido['nombreArbitro1'] ?? '').' '.($partido['apellidoArbitro1'] ?? ''));
+    $n2 = !empty($partido['nombreArbitro2']) ? trim($partido['nombreArbitro2'].' '.$partido['apellidoArbitro2']) : '';
+    $n3 = !empty($partido['nombreArbitro3']) ? trim($partido['nombreArbitro3'].' '.$partido['apellidoArbitro3']) : '';
+    $n4 = !empty($partido['nombreArbitro4']) ? trim($partido['nombreArbitro4'].' '.$partido['apellidoArbitro4']) : '';
 
     if ($partido['idArbitro1'] == $idArbitro) {
-        $rol = 'ARBITRO'; $tarifa = $partido['pagoArbitro1'];
-        $arbitroPpal = $n1; $asistente1 = $n2; $asistente2 = $n3; $emergente = $n4;
+        $rol = 'ÁRBITRO'; $tarifa = $partido['pagoArbitro1'];
     } elseif ($partido['idArbitro2'] == $idArbitro) {
         $rol = 'ASISTENTE 1'; $tarifa = $partido['pagoArbitro2'];
-        $arbitroPpal = $n1; $asistente1 = $n2; $asistente2 = $n3; $emergente = $n4;
     } elseif ($partido['idArbitro3'] == $idArbitro) {
         $rol = 'ASISTENTE 2'; $tarifa = $partido['pagoArbitro3'];
-        $arbitroPpal = $n1; $asistente1 = $n2; $asistente2 = $n3; $emergente = $n4;
     } elseif ($partido['idArbitro4'] == $idArbitro) {
         $rol = 'EMERGENTE'; $tarifa = $partido['pagoArbitro4'];
-        $arbitroPpal = $n1; $asistente1 = $n2; $asistente2 = $n3; $emergente = $n4;
     }
 
     $totalPagar += $tarifa;
+
+    // tipopago viene directo del partido (cp.tipopago)
+    $tipoPagoTexto = $tipoPagoLabels[$partido['tipopago']] ?? ucfirst($partido['tipopago'] ?? '');
 
     $partidos_data[] = [
         'equipos'      => strtoupper($partido['equipoLocal']).' vs '.strtoupper($partido['equipoVisitante']),
@@ -148,21 +161,21 @@ while ($partido = $partidos->fetch_assoc()) {
         'lugar'        => strtoupper($partido['canchaLugar']),
         'fecha'        => formatearFecha($partido['fecha']),
         'torneo'       => strtoupper($partido['nombreTorneo']),
-        'categoria'    => strtoupper($partido['categoriaText'] ?? $partido['nombreCategoria']),
+        'categoria'    => strtoupper($partido['categoriaText'] ?: $partido['nombreCategoria']),
         'rol'          => $rol,
         'tarifa'       => $tarifa,
-        'arbitroPpal'  => strtoupper($arbitroPpal),
-        'asistente1'   => strtoupper($asistente1),
-        'asistente2'   => strtoupper($asistente2),
-        'emergente'    => strtoupper($emergente),
+        'tipopago'     => $tipoPagoTexto,
+        'arbitroPpal'  => strtoupper($n1),
+        'asistente1'   => strtoupper($n2),
+        'asistente2'   => strtoupper($n3),
+        'emergente'    => strtoupper($n4),
     ];
 }
 
 $totalPartidos  = count($partidos_data);
-$nombreCompleto = strtoupper($arbitroInfo['nombre'].' '.$arbitroInfo['apellido']);
+$nombreCompleto = strtoupper(($arbitroInfo['nombre'] ?? '').' '.($arbitroInfo['apellido'] ?? ''));
 $categoria      = strtoupper($arbitroInfo['categoriaArbitro'] ?? '');
-$cedula         = $arbitroInfo['cedula'];
-$tipoPago       = $categoria === 'PRIMERA' ? 'PAGO INMEDIATO' : 'PAGO 15 DÍAS';
+$cedula         = $arbitroInfo['cedula'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -170,229 +183,62 @@ $tipoPago       = $categoria === 'PRIMERA' ? 'PAGO INMEDIATO' : 'PAGO 15 DÍAS';
 <meta charset="UTF-8">
 <title>Cuenta de Cobro – <?= h($nombreCompleto) ?></title>
 <style>
-/* ── IMPRESIÓN ── */
 @media print {
-
     .no-print { display:none !important; }
-
-    body {
-        margin: 0;
-        padding: 0;
-        background: white;
-    }
-
-    /* Margen inferior grande para reservar espacio del footer */
-    @page {
-        size: letter portrait;
-        margin: 10mm 10mm 10mm 10mm;
-    } 
-
-    /* Footer repetido en cada página */
-    .footer-print {
-        position: fixed;
-        bottom: 0;
-        left: 10mm;
-        right: 10mm;
-        margin-top: 30mm;
-    }
-
-    /* Contenido nunca invade el footer */
-    .hoja {
-        margin-bottom: 0;
-        padding-bottom: 0;
-        box-shadow: none;
-    }
+    body { margin:0; padding:0; background:white; }
+    @page { size: letter portrait; margin: 10mm 10mm 10mm 10mm; }
+    .footer-print { position:fixed; bottom:0; left:10mm; right:10mm; margin-top:30mm; }
+    .hoja { margin-bottom:0; padding-bottom:0; box-shadow:none; }
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:11px; color:#000; }
 
-body {
-    font-family: 'Times New Roman', Times, serif;
-    background: #d4d4d4;
-    font-size: 11px;
-    color: #000;
-}
-
-/* ── TOOLBAR ── */
 .toolbar {
-    font-family: Arial, sans-serif;
-    background: #fff;
-    padding: 7px 16px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.2);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    font-family:Arial,sans-serif; background:#fff; padding:7px 16px;
+    margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,.2);
+    display:flex; justify-content:space-between; align-items:center;
 }
 .resumen { font-size:12px; }
 .resumen strong { color:#1a56db; }
-.btn {
-    padding:5px 13px; border:none; border-radius:4px;
-    cursor:pointer; font-weight:bold; font-size:12px; margin-left:5px;
-    font-family:Arial,sans-serif;
-}
+.btn { padding:5px 13px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px; margin-left:5px; font-family:Arial,sans-serif; }
 .btn-print { background:#10b981; color:#fff; }
 .btn-back  { background:#6b7280; color:#fff; }
 
-/* ── HOJA ── */
-.hoja {
-    width: 190mm;
-    margin: 0 auto 10px;
-    background: #fff;
-    padding: 5mm 7mm 6mm;
-    box-shadow: 0 2px 10px rgba(0,0,0,.2);
-}
+.hoja { width:190mm; margin:0 auto 10px; background:#fff; padding:5mm 7mm 6mm; box-shadow:0 2px 10px rgba(0,0,0,.2); }
 
-/* ── ENCABEZADO ── */
-.enc {
-    display: flex;
-    align-items: center;
-    gap: 3mm;
-    border-bottom: 2.5px solid #000;
-    padding-bottom: 2mm;
-    margin-bottom: 2mm;
-}
+.enc { display:flex; align-items:center; gap:3mm; border-bottom:2.5px solid #000; padding-bottom:2mm; margin-bottom:2mm; }
 .enc img { width:16mm; height:16mm; }
 .enc-texto { flex:1; text-align:center; }
 .enc-texto h1 { font-size:14px; font-weight:bold; }
 .enc-texto h2 { font-size:11px; font-weight:bold; margin-top:1mm; }
 
-/* ── DATOS ÁRBITRO ── */
-.arb-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5mm 0;
-    border-bottom: 1px solid #444;
-    margin-bottom: 2mm;
-    font-size: 11px;
-}
+.arb-row { display:flex; justify-content:space-between; align-items:center; padding:1.5mm 0; border-bottom:1px solid #444; margin-bottom:2mm; font-size:11px; }
 .arb-row .arb-nombre { font-weight:bold; font-size:12px; }
 .arb-row .arb-datos  { display:flex; gap:5mm; }
 
-/* ── CONCEPTO ── */
-.concepto {
-    font-weight: bold;
-    font-size: 10px;
-    border-bottom: 2px solid #000;
-    padding-bottom: 1.5mm;
-    margin-bottom: 3mm;
-    letter-spacing: .01em;
-}
+.concepto { font-weight:bold; font-size:10px; border-bottom:2px solid #000; padding-bottom:1.5mm; margin-bottom:3mm; letter-spacing:.01em; }
 
-/* =========================================
-   CUADRO DE PARTIDO — replica exacta imagen
-   ========================================= */
-.cuadro {
-    border: 1px solid #666;
-    margin-bottom: 3mm;
-    page-break-inside: avoid;
-}
-
-/* Cada fila horizontal */
-.fila {
-    display: flex;
-    border-bottom: 1px solid #666;
-    min-height: 5.5mm;
-}
-.fila:last-child { border-bottom: none; }
-
-/* Etiqueta izquierda gris */
-.lbl {
-    background: #f0f0f0;
-    font-weight: bold;
-    font-size: 10px;
-    padding: 0.8mm 2mm;
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-    border-right: 1px solid #666;
-    min-width: 19mm;
-    flex-shrink: 0;
-}
-
-/* Valor */
-.val {
-    font-size: 10.5px;
-    padding: 0.8mm 2mm;
-    display: flex;
-    align-items: center;
-    flex: 1;
-}
-.val.negrita { font-weight: bold; }
-
-/* Separador vertical entre col-izq y col-der */
-.sep { border-right: 1px solid #666; }
-
-/* Fila equipos: label + equipos centrado (span total) */
-.fila-equipos .lbl   { min-width: 19mm; }
-.fila-equipos .val   { justify-content: center; font-weight: bold; font-size: 11px; }
-
-/* Columnas iguales izq/der */
+.cuadro { border:1px solid #666; margin-bottom:3mm; page-break-inside:avoid; }
+.fila { display:flex; border-bottom:1px solid #666; min-height:5.5mm; }
+.fila:last-child { border-bottom:none; }
+.lbl { background:#f0f0f0; font-weight:bold; font-size:10px; padding:0.8mm 2mm; display:flex; align-items:center; white-space:nowrap; border-right:1px solid #666; min-width:19mm; flex-shrink:0; }
+.val { font-size:10.5px; padding:0.8mm 2mm; display:flex; align-items:center; flex:1; }
+.val.negrita { font-weight:bold; }
+.fila-equipos .lbl { min-width:19mm; }
+.fila-equipos .val { justify-content:center; font-weight:bold; font-size:11px; }
 .col-izq { display:flex; flex:1; border-right:1px solid #666; }
 .col-der  { display:flex; flex:1; }
-.col-der .lbl { min-width: 22mm; }
+.col-der .lbl { min-width:22mm; }
 
-/* ── TOTAL ── */
-.total-bloque {
-    border: 1px solid #000;
-    margin-top: 4mm;
-    page-break-inside: avoid;
-}
-.total-fila {
-    display: flex;
-    border-bottom: 1px solid #000;
-    min-height: 8mm;
-}
+.total-bloque { border:1px solid #000; margin-top:4mm; page-break-inside:avoid; }
+.total-fila { display:flex; border-bottom:1px solid #000; min-height:8mm; }
 .total-fila:last-child { border-bottom:none; }
-
-.tf-firma {
-    flex: 1;
-    border-right: 1px solid #000;
-    padding: 2mm 3mm;
-    font-weight: bold;
-    font-size: 10.5px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    min-height: 18mm;
-}
-.tf-total-lbl {
-    width: 22mm;
-    border-right: 1px solid #000;
-    font-weight: bold;
-    font-size: 10.5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1mm;
-    flex-shrink: 0;
-}
-.tf-total-val {
-    flex: 1;
-    font-size: 15px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 1mm 3mm;
-}
-.tf-obs {
-    flex: 1;
-    border-right: 1px solid #000;
-    padding: 1.5mm 3mm;
-    font-size: 10px;
-    min-height: 14mm;
-    vertical-align: top;
-}
-.tf-aut {
-    width: 40mm;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 10.5px;
-}
+.tf-firma { flex:1; border-right:1px solid #000; padding:2mm 3mm; font-weight:bold; font-size:10.5px; display:flex; align-items:flex-end; justify-content:center; min-height:18mm; }
+.tf-total-lbl { width:22mm; border-right:1px solid #000; font-weight:bold; font-size:10.5px; display:flex; align-items:center; justify-content:center; padding:1mm; flex-shrink:0; }
+.tf-total-val { flex:1; font-size:15px; font-weight:bold; display:flex; align-items:center; justify-content:flex-end; padding:1mm 3mm; }
+.tf-obs { flex:1; border-right:1px solid #000; padding:1.5mm 3mm; font-size:10px; min-height:14mm; vertical-align:top; }
+.tf-aut { width:40mm; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:10.5px; }
 </style>
 </head>
 <body>
@@ -402,8 +248,8 @@ body {
     <div class="resumen">
         <strong><?= h($nombreCompleto) ?></strong> &nbsp;|&nbsp;
         CC: <?= h($cedula) ?> &nbsp;|&nbsp;
-        <strong><?= $totalPartidos ?></strong> partido<?= $totalPartidos!==1?'s':'' ?> &nbsp;|&nbsp;
-        Total: <strong>$<?= number_format($totalPagar,0,',','.') ?></strong>
+        <strong><?= $totalPartidos ?></strong> partido<?= $totalPartidos !== 1 ? 's' : '' ?> &nbsp;|&nbsp;
+        Total: <strong>$<?= number_format($totalPagar, 0, ',', '.') ?></strong>
     </div>
     <div>
         <button onclick="window.print()" class="btn btn-print">🖨️ Imprimir</button>
@@ -438,11 +284,10 @@ body {
 
     <!-- CONCEPTO -->
     <div class="concepto">
-        
-        <h3>CUENTA DE COBRO:</h3>
+        <h3>CUENTA DE COBRO: <?= $totalImpresiones ?></h3>
     </div>
 
-    <!-- ── CUADROS ── -->
+    <!-- CUADROS -->
     <?php foreach ($partidos_data as $p): ?>
     <div class="cuadro">
 
@@ -452,7 +297,7 @@ body {
             <div class="val"><?= h($p['equipos']) ?></div>
         </div>
 
-        <!-- Hora | Designado -->
+        <!-- Hora | Designado | Tarifa -->
         <div class="fila">
             <div class="col-izq">
                 <div class="lbl">Hora:</div>
@@ -461,14 +306,12 @@ body {
             <div class="col-der">
                 <div class="lbl">Designado:</div>
                 <div class="val negrita"><?= h($p['rol']) ?></div>
-                <div class="col-der">
                 <div class="lbl">Tarifa:</div>
-                <div class="val negrita">$<?= number_format($p['tarifa'],0,',','.')?></div>
-            </div>
+                <div class="val negrita">$<?= number_format($p['tarifa'], 0, ',', '.') ?></div>
             </div>
         </div>
 
-        <!-- Lugar | Tarifa -->
+        <!-- Lugar | Árbitro principal -->
         <div class="fila">
             <div class="col-izq">
                 <div class="lbl">Lugar:</div>
@@ -480,7 +323,7 @@ body {
             </div>
         </div>
 
-        <!-- Fecha | Árbitro principal -->
+        <!-- Fecha | Asistente 1 -->
         <div class="fila">
             <div class="col-izq">
                 <div class="lbl">Fecha:</div>
@@ -492,7 +335,7 @@ body {
             </div>
         </div>
 
-        <!-- Torneo | Asistente 1 -->
+        <!-- Torneo | Emergente -->
         <div class="fila">
             <div class="col-izq">
                 <div class="lbl">Torneo:</div>
@@ -504,7 +347,7 @@ body {
             </div>
         </div>
 
-        <!-- Categoría | Emergente -->
+        <!-- Categoría | Estado pago -->
         <div class="fila">
             <div class="col-izq">
                 <div class="lbl">Categoría:</div>
@@ -512,41 +355,41 @@ body {
             </div>
             <div class="col-der">
                 <div class="lbl">Estado:</div>
-                <div class="val">PAGO INMEDIATO</div>
+                <div class="val"><?= h($p['tipopago']) ?></div>
             </div>
         </div>
 
-        <!-- Observaciones | Estado -->
+        <!-- Observaciones -->
         <div class="fila">
             <div class="col-izq">
                 <div class="lbl">Observaciones:</div>
                 <div class="val"></div>
             </div>
-            
         </div>
 
     </div><!-- /cuadro -->
     <?php endforeach; ?>
-    
+
+    <!-- TOTAL FINAL -->
     <div class="total-bloque footer-print">
         <div class="total-fila">
             <div class="tf-firma">Firma y Cédula de Árbitro</div>
             <div class="tf-total-lbl">TOTAL</div>
-            <div class="tf-total-val">$<?= number_format($totalPagar,0,',','.') ?></div>
+            <div class="tf-total-val">$<?= number_format($totalPagar, 0, ',', '.') ?></div>
         </div>
         <div class="total-fila">
             <div class="tf-obs"><strong>Observaciones</strong></div>
             <div class="tf-aut">Autorizada</div>
         </div>
     </div>
-</div><!-- /hoja -->
-    <!-- TOTAL FINAL -->
 
+</div><!-- /hoja -->
 
 </body>
 </html>
 <?php
 $stmt->close();
 $stmtArbitro->close();
+$stmtContador->close();
 $conexion->close();
 ?>

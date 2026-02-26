@@ -44,7 +44,6 @@ require_once "assets/header.php";
             min-height: 100vh;
         }
 
-        /* ── TÍTULO ── */
         .page-title {
             text-align: center;
             padding: 2rem 1rem 0.5rem;
@@ -53,7 +52,6 @@ require_once "assets/header.php";
             font-size: 1.6rem;
             font-weight: 600;
             letter-spacing: .04em;
-            color: var(--text);
         }
         .page-title p {
             color: var(--muted);
@@ -71,7 +69,6 @@ require_once "assets/header.php";
             padding: 1.8rem 2rem;
             box-shadow: 0 2px 12px rgba(0,0,0,.06);
         }
-
         .filters-panel h2 {
             font-size: 1rem;
             font-weight: 600;
@@ -90,7 +87,6 @@ require_once "assets/header.php";
             grid-template-columns: 1fr 1fr;
             gap: 1.2rem;
         }
-
         .filter-group {
             display: flex;
             flex-direction: column;
@@ -113,7 +109,6 @@ require_once "assets/header.php";
             color: var(--text);
             background: var(--surface);
             transition: border-color .2s, box-shadow .2s;
-            appearance: none;
         }
         .filter-group input:focus,
         .filter-group select:focus {
@@ -121,8 +116,6 @@ require_once "assets/header.php";
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(26,86,219,.12);
         }
-
-        /* Multi-select torneos */
         .filter-group select[multiple] {
             height: 130px;
             padding: .4rem;
@@ -131,23 +124,18 @@ require_once "assets/header.php";
             padding: .4rem .6rem;
             border-radius: 5px;
             margin-bottom: 2px;
-            cursor: pointer;
         }
         .filter-group select[multiple] option:checked {
             background: var(--tag-bg);
             color: var(--tag-text);
             font-weight: 600;
         }
-
         .select-hint {
             font-size: .75rem;
             color: var(--muted);
-            margin-top: -.2rem;
         }
-
         .filter-full { grid-column: span 2; }
 
-        /* ── BOTÓN BUSCAR ── */
         .btn-buscar {
             width: 100%;
             margin-top: 1.2rem;
@@ -172,7 +160,6 @@ require_once "assets/header.php";
             transform: translateY(-1px);
             box-shadow: 0 4px 16px rgba(26,86,219,.35);
         }
-        .btn-buscar:active { transform: translateY(0); }
         .btn-buscar i { font-size: 1.2rem; }
 
         /* ── RESULTADOS ── */
@@ -181,18 +168,13 @@ require_once "assets/header.php";
             margin: 0 auto 3rem;
             display: none;
         }
-
         .results-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 1rem 0 .8rem;
         }
-        .results-header h3 {
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: var(--text);
-        }
+        .results-header h3 { font-size: 1.05rem; font-weight: 600; }
         .results-header .badge {
             background: var(--tag-bg);
             color: var(--tag-text);
@@ -202,8 +184,6 @@ require_once "assets/header.php";
             border-radius: 99px;
             font-family: 'DM Mono', monospace;
         }
-
-        /* Fechas info */
         .dates-info {
             font-size: .85rem;
             color: var(--muted);
@@ -218,7 +198,7 @@ require_once "assets/header.php";
         }
         .dates-info i { font-size: 1rem; color: var(--accent); }
 
-        /* ── TABLA ÁRBITROS ── */
+        /* ── TABLA ── */
         .arbitros-table {
             width: 100%;
             background: var(--surface);
@@ -228,7 +208,6 @@ require_once "assets/header.php";
             box-shadow: 0 2px 12px rgba(0,0,0,.06);
             border-collapse: collapse;
         }
-
         .arbitros-table thead tr {
             background: #f8f9fb;
             border-bottom: 2px solid var(--border);
@@ -242,23 +221,16 @@ require_once "assets/header.php";
             text-transform: uppercase;
             letter-spacing: .07em;
         }
-        .arbitros-table th:last-child { text-align: center; }
-
         .arbitros-table tbody tr {
             border-bottom: 1px solid var(--border);
             transition: background .15s;
         }
         .arbitros-table tbody tr:last-child { border-bottom: none; }
         .arbitros-table tbody tr:hover { background: var(--row-hover); }
-
-        .arbitros-table td {
-            padding: .9rem 1.2rem;
-            font-size: .95rem;
-        }
+        .arbitros-table td { padding: .9rem 1.2rem; font-size: .95rem; }
 
         .arbitro-name {
             font-weight: 600;
-            color: var(--text);
             display: flex;
             align-items: center;
             gap: .6rem;
@@ -277,7 +249,6 @@ require_once "assets/header.php";
             flex-shrink: 0;
             font-family: 'DM Mono', monospace;
         }
-
         .partidos-count {
             display: inline-flex;
             align-items: center;
@@ -291,7 +262,44 @@ require_once "assets/header.php";
             font-family: 'DM Mono', monospace;
         }
 
-        /* ── BOTÓN DESCARGAR ── */
+        /* ── CONTADOR ── */
+        .contador-wrap {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .contador-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+            font-size: .85rem;
+            font-weight: 700;
+            padding: .3rem .8rem;
+            border-radius: 99px;
+            font-family: 'DM Mono', monospace;
+            min-width: 70px;
+            justify-content: center;
+        }
+        .btn-ajustar {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            padding: .3rem .45rem;
+            color: var(--muted);
+            font-size: .85rem;
+            line-height: 1;
+            transition: all .15s;
+        }
+        .btn-ajustar:hover {
+            background: var(--tag-bg);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
         .btn-descargar {
             display: inline-flex;
             align-items: center;
@@ -306,17 +314,15 @@ require_once "assets/header.php";
             font-weight: 600;
             cursor: pointer;
             text-decoration: none;
-            transition: background .2s, transform .15s, box-shadow .2s;
+            transition: background .2s, transform .15s;
             box-shadow: 0 1px 4px rgba(26,86,219,.2);
         }
         .btn-descargar:hover {
             background: var(--primary-h);
             transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(26,86,219,.3);
         }
         .btn-descargar i { font-size: 1rem; }
 
-        /* ── EMPTY STATE ── */
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -328,9 +334,6 @@ require_once "assets/header.php";
             margin-bottom: .8rem;
             color: var(--border);
         }
-        .empty-state p { font-size: .95rem; }
-
-        /* ── LOADING ── */
         .loading-state {
             text-align: center;
             padding: 2.5rem 1rem;
@@ -338,8 +341,7 @@ require_once "assets/header.php";
             display: none;
         }
         .spinner {
-            width: 36px;
-            height: 36px;
+            width: 36px; height: 36px;
             border: 3px solid var(--border);
             border-top-color: var(--primary);
             border-radius: 50%;
@@ -348,24 +350,69 @@ require_once "assets/header.php";
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── TORNEOS TAGS ── */
-        .torneo-tags {
+        /* ── MODAL AJUSTE ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 14px;
+            padding: 2rem;
+            width: 380px;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,.25);
+        }
+        .modal-box h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: .4rem;
+        }
+        .modal-box p {
+            font-size: .85rem;
+            color: var(--muted);
+            margin-bottom: 1.2rem;
+        }
+        .modal-box input[type=number] {
+            width: 100%;
+            padding: .75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-family: 'DM Mono', monospace;
+            text-align: center;
+            margin-bottom: 1.2rem;
+        }
+        .modal-box input[type=number]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26,86,219,.12);
+        }
+        .modal-btns {
             display: flex;
-            flex-wrap: wrap;
-            gap: .4rem;
-            margin-top: .5rem;
+            gap: .75rem;
         }
-        .torneo-tag {
-            font-size: .72rem;
-            font-weight: 500;
-            background: #f0f7ff;
-            color: var(--accent);
-            border: 1px solid #c3dafe;
-            padding: .15rem .55rem;
-            border-radius: 99px;
+        .modal-btns button {
+            flex: 1;
+            padding: .75rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: .95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .15s;
         }
+        .modal-btns button:hover { opacity: .88; }
+        .btn-confirmar { background: var(--primary); color: white; }
+        .btn-cancelar-modal { background: #e5e7eb; color: #374151; }
 
-        /* ── RESPONSIVE ── */
         @media (max-width: 680px) {
             .filters-panel { margin: 1rem; padding: 1.2rem; }
             .filter-grid { grid-template-columns: 1fr; }
@@ -381,10 +428,9 @@ require_once "assets/header.php";
     <p>Selecciona un rango de fechas y los torneos para generar las cuentas de árbitros</p>
 </div>
 
-<!-- PANEL DE FILTROS -->
+<!-- FILTROS -->
 <div class="filters-panel">
     <h2><i class="material-icons">tune</i> Filtros de búsqueda</h2>
-
     <div class="filter-grid">
         <div class="filter-group">
             <label>Fecha inicio</label>
@@ -406,49 +452,56 @@ require_once "assets/header.php";
             <span class="select-hint">Mantén Ctrl (o Cmd) para seleccionar varios · Sin selección = todos los torneos</span>
         </div>
     </div>
-
     <button class="btn-buscar" onclick="buscarArbitros()">
         <i class="material-icons">search</i>
         Buscar árbitros programados
     </button>
 </div>
 
-<!-- PANEL DE RESULTADOS -->
+<!-- RESULTADOS -->
 <div class="results-panel" id="resultsPanel">
-
     <div class="loading-state" id="loadingState">
         <div class="spinner"></div>
         <p>Buscando árbitros…</p>
     </div>
-
     <div id="resultsContent"></div>
 </div>
 
+<!-- MODAL AJUSTE CONTADOR -->
+<div class="modal-overlay" id="modalAjuste">
+    <div class="modal-box">
+        <h3>Ajustar contador</h3>
+        <p id="modalAjusteDesc">Árbitro: —</p>
+        <input type="number" id="modalAjusteValor" min="0" placeholder="Nuevo valor">
+        <div class="modal-btns">
+            <button class="btn-cancelar-modal" onclick="cerrarModalAjuste()">Cancelar</button>
+            <button class="btn-confirmar"      onclick="confirmarAjuste()">Guardar</button>
+        </div>
+    </div>
+</div>
+
 <script>
-// Establecer fecha por defecto: inicio de mes actual → hoy
-(function() {
-    const hoy = new Date();
-    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    const fmt = d => d.toISOString().split('T')[0];
-    document.getElementById('fechaInicio').value = fmt(primerDia);
+// Fechas por defecto: primer día del mes → hoy
+(function () {
+    const hoy  = new Date();
+    const ini  = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const fmt  = d => d.toISOString().split('T')[0];
+    document.getElementById('fechaInicio').value = fmt(ini);
     document.getElementById('fechaFin').value    = fmt(hoy);
 })();
 
-function buscarArbitros() {
-    const fechaInicio = document.getElementById('fechaInicio').value;
-    const fechaFin    = document.getElementById('fechaFin').value;
+// Mapa idArbitro → { nombre, total } para actualizaciones en vivo
+const estado = {};
 
-    if (!fechaInicio || !fechaFin) {
-        alert('Por favor selecciona un rango de fechas');
-        return;
-    }
-    if (fechaFin < fechaInicio) {
-        alert('La fecha fin no puede ser anterior a la fecha inicio');
-        return;
-    }
+// ── Buscar árbitros ───────────────────────────────────────────
+async function buscarArbitros() {
+    const fi = document.getElementById('fechaInicio').value;
+    const ff = document.getElementById('fechaFin').value;
 
-    // Torneos seleccionados
-    const sel = document.getElementById('torneosSelect');
+    if (!fi || !ff) { alert('Por favor selecciona un rango de fechas'); return; }
+    if (ff < fi)    { alert('La fecha fin no puede ser anterior a la fecha inicio'); return; }
+
+    const sel     = document.getElementById('torneosSelect');
     const torneos = Array.from(sel.selectedOptions).map(o => o.value);
 
     const panel   = document.getElementById('resultsPanel');
@@ -459,31 +512,48 @@ function buscarArbitros() {
     loading.style.display = 'block';
     content.innerHTML     = '';
 
-    const formData = new FormData();
-    formData.append('accion', 'buscar_arbitros_programados');
-    formData.append('fechaInicio', fechaInicio);
-    formData.append('fechaFin', fechaFin);
-    torneos.forEach(id => formData.append('torneos[]', id));
+    const fd = new FormData();
+    fd.append('accion', 'buscar_arbitros_programados');
+    fd.append('fechaInicio', fi);
+    fd.append('fechaFin', ff);
+    torneos.forEach(id => fd.append('torneos[]', id));
 
-    fetch('consultas.php', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
-            loading.style.display = 'none';
-            renderResultados(data, fechaInicio, fechaFin);
-        })
-        .catch(() => {
-            loading.style.display = 'none';
-            content.innerHTML = `<div class="empty-state">
-                <i class="material-icons">error_outline</i>
-                <p>Error de conexión. Intenta de nuevo.</p>
-            </div>`;
-        });
+    try {
+        const res  = await fetch('consultas.php', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        // Cargar contadores de todos los árbitros en paralelo
+        if (data.arbitros && data.arbitros.length) {
+            await Promise.all(data.arbitros.map(a => cargarContador(a.idArbitro)));
+        }
+
+        loading.style.display = 'none';
+        renderResultados(data, fi, ff);
+    } catch (e) {
+        loading.style.display = 'none';
+        content.innerHTML = `<div class="empty-state">
+            <i class="material-icons">error_outline</i>
+            <p>Error de conexión. Intenta de nuevo.</p>
+        </div>`;
+    }
 }
 
-function renderResultados(data, fechaInicio, fechaFin) {
+// ── Cargar contador individual ────────────────────────────────
+async function cargarContador(idArbitro) {
+    const fd = new FormData();
+    fd.append('accion', 'obtener_contador');
+    fd.append('idArbitro', idArbitro);
+    const res  = await fetch('consultas.php', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!estado[idArbitro]) estado[idArbitro] = {};
+    estado[idArbitro].total = data.total ?? 0;
+}
+
+// ── Renderizar tabla de resultados ────────────────────────────
+function renderResultados(data, fi, ff) {
     const content = document.getElementById('resultsContent');
 
-    if (!data.arbitros || data.arbitros.length === 0) {
+    if (!data.arbitros || !data.arbitros.length) {
         content.innerHTML = `<div class="empty-state">
             <i class="material-icons">person_search</i>
             <p>No se encontraron árbitros programados en ese rango de fechas y torneos.</p>
@@ -491,15 +561,10 @@ function renderResultados(data, fechaInicio, fechaFin) {
         return;
     }
 
-    // Fechas formateadas para mostrar
-    const fmtDate = s => {
-        const [y,m,d] = s.split('-');
-        return `${d}/${m}/${y}`;
-    };
+    const fmtDate = s => { const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
 
-    // Torneos seleccionados (para pasar al generador)
-    const sel = document.getElementById('torneosSelect');
-    const torneosSelIds = Array.from(sel.selectedOptions).map(o => o.value);
+    const sel         = document.getElementById('torneosSelect');
+    const torneosIds  = Array.from(sel.selectedOptions).map(o => o.value);
 
     let html = `
         <div class="results-header">
@@ -508,7 +573,7 @@ function renderResultados(data, fechaInicio, fechaFin) {
         </div>
         <div class="dates-info">
             <i class="material-icons">date_range</i>
-            Del <strong>${fmtDate(fechaInicio)}</strong> al <strong>${fmtDate(fechaFin)}</strong>
+            Del <strong>${fmtDate(fi)}</strong> al <strong>${fmtDate(ff)}</strong>
             ${data.torneos_nombre ? ' · ' + data.torneos_nombre : ''}
         </div>
         <table class="arbitros-table">
@@ -516,22 +581,21 @@ function renderResultados(data, fechaInicio, fechaFin) {
                 <tr>
                     <th>Árbitro</th>
                     <th>Partidos</th>
+                    <th>Impresiones</th>
                     <th style="text-align:center;">Cuenta de cobro</th>
                 </tr>
             </thead>
-            <tbody>
-    `;
+            <tbody>`;
 
     data.arbitros.forEach(a => {
         const initials = (a.nombre.charAt(0) + a.apellido.charAt(0)).toUpperCase();
+        const total    = estado[a.idArbitro]?.total ?? 0;
 
-        // Construir URL del generador
-        const params = new URLSearchParams({
-            fechaInicio,
-            fechaFin,
-            arbitro: a.idArbitro
-        });
-        torneosSelIds.forEach(id => params.append('torneos[]', id));
+        // Guardar nombre para el modal
+        estado[a.idArbitro] = { ...estado[a.idArbitro], nombre: `${a.nombre} ${a.apellido}` };
+
+        const params = new URLSearchParams({ fechaInicio: fi, fechaFin: ff, arbitro: a.idArbitro });
+        torneosIds.forEach(id => params.append('torneos[]', id));
         const url = `generar_cuentas_cobro_html.php?${params.toString()}`;
 
         html += `
@@ -541,7 +605,7 @@ function renderResultados(data, fechaInicio, fechaFin) {
                         <div class="arbitro-avatar">${initials}</div>
                         <div>
                             <div>${a.nombre} ${a.apellido}</div>
-                            <div style="font-size:.78rem; color:var(--muted); font-weight:400;">CC ${a.cedula}</div>
+                            <div style="font-size:.78rem;color:var(--muted);font-weight:400;">CC ${a.cedula}</div>
                         </div>
                     </div>
                 </td>
@@ -551,19 +615,101 @@ function renderResultados(data, fechaInicio, fechaFin) {
                         ${a.totalPartidos}
                     </span>
                 </td>
+                <td>
+                    <div class="contador-wrap">
+                        <span class="contador-badge" id="ctr_${a.idArbitro}">
+                            🖨️ ${total}
+                        </span>
+                        <button class="btn-ajustar"
+                                onclick="abrirModalAjuste(${a.idArbitro})"
+                                title="Ajustar contador">
+                            ✏️
+                        </button>
+                    </div>
+                </td>
                 <td style="text-align:center;">
-                    <a href="${url}" target="_blank" class="btn-descargar">
+                    <a href="${url}" target="_blank" class="btn-descargar"
+                       onclick="onDescargar(event, ${a.idArbitro}, '${fi}', '${ff}', '${url}')">
                         <i class="material-icons">print</i>
                         Descargar programación
                     </a>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     });
 
     html += `</tbody></table>`;
     content.innerHTML = html;
 }
+
+// ── Al hacer clic en Descargar: abrir en nueva pestaña
+//    El incremento lo hace generar_cuentas_cobro_html.php al cargarse,
+//    pero aquí actualizamos el badge en la misma página también.
+function onDescargar(e, idArbitro, fi, ff, url) {
+    // Dejamos que el href abra la pestaña normalmente.
+    // Después de un pequeño delay recargamos el contador en este panel.
+    setTimeout(() => actualizarBadge(idArbitro), 1500);
+    fd = new FormData();
+    fd.append('accion', 'ajustar_contador');
+    fd.append('idArbitro', idArbitro);
+    fd.append('nuevo', (estado[idArbitro]?.total ?? 0) + 1);
+    fetch('consultas.php', { method: 'POST', body: fd });
+
+}
+
+async function actualizarBadge(idArbitro) {
+    await cargarContador(idArbitro);
+    const el = document.getElementById('ctr_' + idArbitro);
+    if (el) el.textContent = '🖨️ ' + (estado[idArbitro]?.total ?? 0);
+}
+
+// ── Modal de ajuste ───────────────────────────────────────────
+let _ajusteIdArbitro = null;
+
+function abrirModalAjuste(idArbitro) {
+    _ajusteIdArbitro = idArbitro;
+    const nombre = estado[idArbitro]?.nombre ?? `Árbitro #${idArbitro}`;
+    const total  = estado[idArbitro]?.total  ?? 0;
+
+    document.getElementById('modalAjusteDesc').textContent  = `${nombre} — actual: ${total}`;
+    document.getElementById('modalAjusteValor').value       = total;
+    document.getElementById('modalAjuste').classList.add('show');
+    document.getElementById('modalAjusteValor').focus();
+}
+
+function cerrarModalAjuste() {
+    document.getElementById('modalAjuste').classList.remove('show');
+    _ajusteIdArbitro = null;
+}
+
+async function confirmarAjuste() {
+    const nuevo = parseInt(document.getElementById('modalAjusteValor').value, 10);
+    if (isNaN(nuevo) || nuevo < 0) {
+        alert('Ingresa un valor válido (0 o mayor).');
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('accion',    'ajustar_contador');
+    fd.append('idArbitro', _ajusteIdArbitro);
+    fd.append('nuevo',     nuevo);
+
+    const res  = await fetch('consultas.php', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+        estado[_ajusteIdArbitro].total = nuevo;
+        const el = document.getElementById('ctr_' + _ajusteIdArbitro);
+        if (el) el.textContent = '🖨️ ' + nuevo;
+        cerrarModalAjuste();
+    } else {
+        alert('Error al ajustar: ' + (data.msg ?? 'desconocido'));
+    }
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modalAjuste').addEventListener('click', function (e) {
+    if (e.target === this) cerrarModalAjuste();
+});
 </script>
 
 </body>

@@ -3,7 +3,6 @@
 session_start();
 require_once 'config.php';
 
-// Validar que sea una petición válida
 if (!isset($_GET['idTorneo']) || !is_numeric($_GET['idTorneo'])) {
     echo '<p class="error-msg">ID de torneo inválido</p>';
     exit;
@@ -32,24 +31,26 @@ echo '<div class="torneo-header">';
 echo '<h4>' . h($torneo['nombreTorneo']) . '</h4>';
 echo '</div>';
 
-// Obtener categorías del torneo
+// Obtener categorías directamente por idTorneo (sin tabla pivot)
 $stmt = $conexion->prepare("
-    SELECT c.idCategoriaPagoArbitro, c.nombreCategoria, 
-           c.pagoArbitro1, c.pagoArbitro2, c.pagoArbitro3, c.pagoArbitro4
-    FROM categoriaPagoArbitro c
-    INNER JOIN torneo_categoria tc ON tc.idCategoriaPagoArbitro = c.idCategoriaPagoArbitro
-    WHERE tc.idTorneo = ?
-    ORDER BY c.nombreCategoria
+    SELECT idCategoriaPagoArbitro, nombreCategoria, tipopago,
+           pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4
+    FROM categoriaPagoArbitro
+    WHERE idTorneo = ?
+    ORDER BY nombreCategoria
 ");
 $stmt->bind_param("i", $idTorneo);
 $stmt->execute();
 $result = $stmt->get_result();
+
+$tipoPagoLabel = ['inmediato' => 'Pago inmediato', 'quincenal' => 'Pago quincenal'];
 
 if ($result->num_rows === 0) {
     echo '<p class="no-data">No hay categorías registradas para este torneo.</p>';
 } else {
     echo '<div class="categorias-grid">';
     while ($cat = $result->fetch_assoc()) {
+        $tp = $tipoPagoLabel[$cat['tipopago']] ?? ucfirst($cat['tipopago']);
         ?>
         <div class="categoria-card" data-id="<?= $cat['idCategoriaPagoArbitro'] ?>">
             <div class="categoria-header">
@@ -57,7 +58,15 @@ if ($result->num_rows === 0) {
                 <div class="categoria-actions">
                     <button type="button" 
                             class="btn-icon btn-edit" 
-                            onclick="editarCategoria(<?= $cat['idCategoriaPagoArbitro'] ?>, '<?= h(addslashes($cat['nombreCategoria'])) ?>', <?= $cat['pagoArbitro1'] ?>, <?= $cat['pagoArbitro2'] ?>, <?= $cat['pagoArbitro3'] ?>, <?= $cat['pagoArbitro4'] ?>)"
+                            onclick="editarCategoria(
+                                <?= $cat['idCategoriaPagoArbitro'] ?>, 
+                                '<?= h(addslashes($cat['nombreCategoria'])) ?>', 
+                                <?= (float)$cat['pagoArbitro1'] ?>, 
+                                <?= (float)$cat['pagoArbitro2'] ?>, 
+                                <?= (float)$cat['pagoArbitro3'] ?>, 
+                                <?= (float)$cat['pagoArbitro4'] ?>,
+                                '<?= h($cat['tipopago']) ?>'
+                            )"
                             title="Editar">
                         <i class="material-icons">edit</i>
                     </button>
@@ -85,6 +94,10 @@ if ($result->num_rows === 0) {
                 <div class="pago-item">
                     <span class="pago-label">Cuarto Árbitro:</span>
                     <span class="pago-valor">$<?= number_format($cat['pagoArbitro4'], 2) ?></span>
+                </div>
+                <div class="pago-item pago-tipo">
+                    <span class="pago-label">Tipo de pago:</span>
+                    <span class="pago-badge pago-badge-<?= h($cat['tipopago']) ?>"><?= h($tp) ?></span>
                 </div>
             </div>
         </div>

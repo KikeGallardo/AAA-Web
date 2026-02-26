@@ -5,222 +5,166 @@ ini_set('display_errors', 0);
 
 try {
     require "basedatos_pdo.php";
-    
+
     $rawInput = file_get_contents("php://input");
-    error_log("Raw input recibido: " . substr($rawInput, 0, 500));
-    
     $data = json_decode($rawInput, true);
 
-    if ($data === null) {
-        throw new Exception("JSON inválido. Error: " . json_last_error_msg());
+    if ($data === null) throw new Exception("JSON inválido: " . json_last_error_msg());
+    if (!isset($data['partidos']) || !is_array($data['partidos'])) throw new Exception("Se esperaba 'partidos' array.");
+
+    // =============================================
+    // TORNEO: Obligatorio, viene del frontend
+    // =============================================
+    $idTorneo = isset($data['idTorneo']) ? (int)$data['idTorneo'] : 0;
+    if (!$idTorneo) {
+        echo json_encode(["success" => false, "error" => "Debes seleccionar un torneo antes de guardar."]);
+        exit;
     }
 
-    if (!isset($data['partidos']) || !is_array($data['partidos'])) {
-        throw new Exception("Formato JSON incorrecto. Se esperaba 'partidos' array.");
+    // Verificar que el torneo existe en la BD
+    $stmtT = $conn->prepare("SELECT idTorneo FROM torneo WHERE idTorneo = ?");
+    $stmtT->execute([$idTorneo]);
+    if (!$stmtT->fetch()) {
+        echo json_encode(["success" => false, "error" => "El torneo seleccionado no existe en la base de datos."]);
+        exit;
     }
 
     $partidos = $data['partidos'];
-    error_log("Total de partidos recibidos: " . count($partidos));
 
     // =============================================
-    // VALIDACIÓN PREVIA: Verificar árbitros faltantes
+    // PASO 1: Recolectar valores únicos
     // =============================================
-    $arbitrosFaltantes = [];
-    
-    foreach ($partidos as $i => $p) {
-        $arbitrosEnPartido = [
-            $p['ARBITRO'] ?? '',
-            $p['ASISTENTE 1'] ?? '',
-            $p['ASISTENTE 2'] ?? '',
-            $p['ASISTENTE 3'] ?? ''
-        ];
-        
-        foreach ($arbitrosEnPartido as $nombreArbitro) {
-            if (!empty($nombreArbitro) && !arbitroExiste($conn, $nombreArbitro)) {
-                if (!in_array($nombreArbitro, $arbitrosFaltantes)) {
-                    $arbitrosFaltantes[] = $nombreArbitro;
-                }
-            }
+    $nombresArbitros   = [];
+    $nombresEquipos    = [];
+    $nombresCategorias = [];
+
+    foreach ($partidos as $p) {
+        foreach (['ARBITRO','ASISTENTE 1','ASISTENTE 2','ASISTENTE 3'] as $col) {
+            if (!empty($p[$col])) $nombresArbitros[] = trim($p[$col]);
         }
+        if (!empty($p['EQUIPO A'])) $nombresEquipos[] = trim($p['EQUIPO A']);
+        if (!empty($p['EQUIPO B'])) $nombresEquipos[] = trim($p['EQUIPO B']);
+        if (!empty($p['CATEGORIA'])) $nombresCategorias[] = trim($p['CATEGORIA']);
     }
 
+    $nombresArbitros   = array_unique($nombresArbitros);
+    $nombresEquipos    = array_unique($nombresEquipos);
+    $nombresCategorias = array_unique($nombresCategorias);
+
+    // =============================================
+    // PASO 2: Cargar árbitros en memoria (1 query)
+    // =============================================
+    $mapArbitros = cargarTodosArbitros($conn);
+
+    $arbitrosFaltantes = [];
+    foreach ($nombresArbitros as $nombre) {
+        if (!buscarIdEnMap($mapArbitros, $nombre)) {
+            $arbitrosFaltantes[] = $nombre;
+        }
+    }
     if (!empty($arbitrosFaltantes)) {
         echo json_encode([
             "success" => false,
             "error" => "No se puede guardar la programación. Faltan árbitros por registrar.",
-            "arbitros_faltantes" => $arbitrosFaltantes,
+            "arbitros_faltantes" => array_values($arbitrosFaltantes),
             "total_faltantes" => count($arbitrosFaltantes)
         ]);
         exit;
     }
 
     // =============================================
-    // Si llegamos aquí, TODOS los árbitros existen
+    // PASO 3: Validar categorías — NO se crean
     // =============================================
+    $mapCategorias = cargarCategorias($conn);
 
+    $categoriasFaltantes = [];
+    foreach ($nombresCategorias as $nombre) {
+        if (!buscarIdEnMap($mapCategorias, $nombre)) {
+            $categoriasFaltantes[] = $nombre;
+        }
+    }
+    if (!empty($categoriasFaltantes)) {
+        echo json_encode([
+            "success" => false,
+            "error" => "No se puede guardar la programación. Hay categorías que no existen en el sistema.",
+            "categorias_faltantes" => array_values($categoriasFaltantes),
+            "total_faltantes" => count($categoriasFaltantes)
+        ]);
+        exit;
+    }
+
+    // =============================================
+    // PASO 4: Cargar/crear equipos (solo equipos pueden crearse)
+    // =============================================
+    $mapEquipos = cargarOCrearEquipos($conn, $nombresEquipos);
+
+    // =============================================
+    // PASO 5: Cargar conflictos de horario (1 query)
+    // =============================================
+    $conflictosExistentes = cargarConflictos($conn, $partidos);
+
+    // =============================================
+    // PASO 6: Procesar y preparar batch INSERT
+    // =============================================
     $conn->beginTransaction();
 
-    $sql = "INSERT INTO partido (
-        idEquipo1,
-        idEquipo2,
-        fecha,
-        hora,
-        idCategoriaPagoArbitro,
-        idTorneoPartido,
-        idArbitro1,
-        idArbitro2,
-        idArbitro3,
-        idArbitro4,
-        canchaLugar,
-        categoriaText
-    ) VALUES (
-        :equipoLocal,
-        :equipoVisitante,
-        :fecha,
-        :hora,
-        :idCategoriaPago,
-        :idTorneo,
-        :arbitroPrincipal,
-        :asistente1,
-        :asistente2,
-        :asistente3,
-        :cancha,
-        :categoria
-    )";
-
-    $stmt = $conn->prepare($sql);
-
-    $guardados = 0;
-    $errores = [];
+    $filasParaInsertar = [];
+    $errores           = [];
+    $conflictosNuevos  = [];
 
     foreach ($partidos as $i => $p) {
         try {
-            error_log("Procesando partido " . ($i + 1) . ": " . json_encode($p));
-            
-            // Verificar columnas necesarias
-            $columnasRequeridas = ['FECHA', 'EQUIPO A', 'EQUIPO B', 'CATEGORIA', 'ARBITRO'];
-            $columnasFaltantes = [];
-            foreach ($columnasRequeridas as $col) {
-                if (!isset($p[$col])) {
-                    $columnasFaltantes[] = $col;
-                } elseif ($col !== 'CATEGORIA' && ($p[$col] === '' || $p[$col] === null)) {
-                    $columnasFaltantes[] = $col;
-                }
-            }
-            
-            if (!empty($columnasFaltantes)) {
-                throw new Exception("Faltan columnas: " . implode(', ', $columnasFaltantes));
-            }
-            
-            // Convertir fecha
-            $fecha = convertirFecha($p['FECHA'] ?? '');
-            if (!$fecha) {
-                throw new Exception("Fecha inválida: " . ($p['FECHA'] ?? 'vacía'));
+            foreach (['FECHA','EQUIPO A','EQUIPO B','ARBITRO'] as $col) {
+                if (empty($p[$col])) throw new Exception("Columna requerida vacía: $col");
             }
 
-            // ✅ CORREGIR HORA
-            $hora = $p['HORA'] ?? '';
-            
-            // Si es un decimal de Excel (0.625 = 3:00 PM)
-            if (is_numeric($hora) && $hora < 1 && $hora > 0) {
-                $totalMinutos = round($hora * 24 * 60);
-                $horas = floor($totalMinutos / 60);
-                $minutos = $totalMinutos % 60;
-                $hora = sprintf("%02d:%02d:00", $horas, $minutos);
-            }
-            // Si es texto con formato "3:00 PM" o "15:00"
-            elseif (is_string($hora) && preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i', $hora, $matches)) {
-                $h = (int)$matches[1];
-                $m = (int)$matches[2];
-                
-                if (isset($matches[3])) {
-                    $period = strtoupper($matches[3]);
-                    if ($period === 'PM' && $h < 12) $h += 12;
-                    if ($period === 'AM' && $h === 12) $h = 0;
-                }
-                
-                $hora = sprintf("%02d:%02d:00", $h, $m);
-            }
-            // Si ya está en formato HH:MM:SS
-            elseif (preg_match('/^\d{2}:\d{2}:\d{2}$/', $hora)) {
-                // Ya está bien, no hacer nada
-            }
-            // Formato inválido
-            else {
-                $hora = '00:00:00';
-                error_log("⚠️ Hora inválida en fila " . ($i + 1) . ": " . ($p['HORA'] ?? 'vacía') . ", usando 00:00:00");
-            }
+            $fecha = convertirFecha($p['FECHA']);
+            if (!$fecha) throw new Exception("Fecha inválida: " . $p['FECHA']);
 
-            // Buscar o crear equipos
-            $idEquipo1 = buscarOCrearEquipo($conn, $p['EQUIPO A'] ?? '');
-            $idEquipo2 = buscarOCrearEquipo($conn, $p['EQUIPO B'] ?? '');
+            $hora = convertirHora($p['HORA'] ?? '');
 
-            if (!$idEquipo1 || !$idEquipo2) {
-                throw new Exception("No se pudieron crear/encontrar los equipos");
-            }
+            $idEquipo1 = buscarIdEnMap($mapEquipos, $p['EQUIPO A']);
+            $idEquipo2 = buscarIdEnMap($mapEquipos, $p['EQUIPO B']);
+            if (!$idEquipo1 || !$idEquipo2) throw new Exception("Equipos no encontrados");
 
-            // Categoría - BUSCAR POR NOMBRE
             $nombreCategoria = trim($p['CATEGORIA'] ?? '');
-            if (empty($nombreCategoria)) {
-                throw new Exception("Categoría vacía");
-            }
-            
-            $idCategoria = buscarCategoriaPorNombre($conn, $nombreCategoria);
-            if (!$idCategoria) {
-                throw new Exception("Categoría no encontrada: '$nombreCategoria'");
-            }
+            if (empty($nombreCategoria)) throw new Exception("Categoría vacía");
+            $idCategoria = buscarIdEnMap($mapCategorias, $nombreCategoria);
+            if (!$idCategoria) throw new Exception("Categoría no encontrada: '$nombreCategoria'");
 
-            // Buscar o crear torneo
-            $nombreTorneo = $p['GRUPO'] ?? $p['CATEGORIA'] ?? 'Sin Torneo';
-            $idTorneo = buscarOCrearTorneo($conn, $nombreTorneo);
-            if (!$idTorneo) {
-                throw new Exception("No se pudo crear/encontrar el torneo");
-            }
+            $idArbitroPrincipal = buscarIdEnMap($mapArbitros, $p['ARBITRO'] ?? '');
+            $idAsistente1       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 1'] ?? '');
+            $idAsistente2       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 2'] ?? '');
+            $idAsistente3       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 3'] ?? '');
 
-            // Buscar árbitros
-            $idArbitroPrincipal = buscarArbitro($conn, $p['ARBITRO'] ?? '');
-            $idAsistente1 = buscarArbitro($conn, $p['ASISTENTE 1'] ?? '');
-            $idAsistente2 = buscarArbitro($conn, $p['ASISTENTE 2'] ?? '');
-            $idAsistente3 = buscarArbitro($conn, $p['ASISTENTE 3'] ?? '');
-
-            // ✅ VALIDAR CONFLICTOS DE HORARIO
-            $arbitrosAsignados = array_filter([
-                $idArbitroPrincipal, 
-                $idAsistente1, 
-                $idAsistente2, 
-                $idAsistente3
-            ]);
-            
+            // Verificar conflictos de horario
+            $arbitrosAsignados = array_filter([$idArbitroPrincipal, $idAsistente1, $idAsistente2, $idAsistente3]);
             foreach ($arbitrosAsignados as $idArbitro) {
-                if ($idArbitro && tieneConflictoHorario($conn, $idArbitro, $fecha, $hora)) {
-                    $nombreArbitro = obtenerNombreArbitro($conn, $idArbitro);
-                    throw new Exception("Conflicto de horario: $nombreArbitro ya tiene un partido el $fecha a las $hora");
+                $clave = "{$idArbitro}_{$fecha}_{$hora}";
+                if (isset($conflictosExistentes[$clave]) || isset($conflictosNuevos[$clave])) {
+                    $nombre = obtenerNombreDeMap($mapArbitros, $idArbitro);
+                    throw new Exception("Conflicto de horario: $nombre ya tiene partido el $fecha a las $hora");
                 }
             }
+            foreach ($arbitrosAsignados as $idArbitro) {
+                $conflictosNuevos["{$idArbitro}_{$fecha}_{$hora}"] = true;
+            }
 
-            // Ejecutar INSERT
-            $stmt->execute([
-                ':equipoLocal'     => $idEquipo1,
-                ':equipoVisitante' => $idEquipo2,
-                ':fecha'           => $fecha,
-                ':hora'            => $hora,
-                ':idCategoriaPago' => $idCategoria,
-                ':idTorneo'        => $idTorneo,
-                ':arbitroPrincipal'=> $idArbitroPrincipal,
-                ':asistente1'      => $idAsistente1,
-                ':asistente2'      => $idAsistente2,
-                ':asistente3'      => $idAsistente3,
-                ':cancha'          => $p['ESCENARIO'] ?? '',
-                ':categoria'       => $p['CATEGORIA'] ?? ''
-            ]);
-
-            $guardados++;
+            $filasParaInsertar[] = [
+                $idEquipo1, $idEquipo2, $fecha, $hora,
+                $idCategoria, $idTorneo,                  // <-- torneo del select, no del Excel
+                $idArbitroPrincipal, $idAsistente1, $idAsistente2, $idAsistente3,
+                $p['ESCENARIO'] ?? '', $p['CATEGORIA'] ?? ''
+            ];
 
         } catch (Exception $e) {
-            $mensaje = "Fila " . ($i + 1) . ": " . $e->getMessage();
-            $errores[] = $mensaje;
-            error_log("ERROR: " . $mensaje);
+            $errores[] = "Fila " . ($i + 1) . ": " . $e->getMessage();
         }
+    }
+
+    $guardados = 0;
+    if (!empty($filasParaInsertar)) {
+        $guardados = insertarPartidosEnBatch($conn, $filasParaInsertar);
     }
 
     $conn->commit();
@@ -232,241 +176,137 @@ try {
         "errores"   => $errores,
         "message"   => "$guardados partidos guardados correctamente"
     ]);
-    exit;
 
 } catch (Exception $e) {
-    error_log("ERROR FATAL: " . $e->getMessage());
-    
-    if (isset($conn) && $conn->inTransaction()) {
-        $conn->rollBack();
-    }
-
-    echo json_encode([
-        "success" => false,
-        "error"   => $e->getMessage()
-    ]);
-    exit;
+    if (isset($conn) && $conn->inTransaction()) $conn->rollBack();
+    echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 
 
-/***** FUNCIONES *****/
+// =============================================
+// FUNCIONES
+// =============================================
 
-function convertirFecha($f) {
-    if (empty($f)) return null;
-    
-    // Si es un número (serial de Excel)
-    if (is_numeric($f) && $f > 1000) {
-        $unixTimestamp = ($f - 25569) * 86400;
-        $date = new DateTime();
-        $date->setTimestamp($unixTimestamp);
-        return $date->format('Y-m-d');
+function cargarTodosArbitros(PDO $conn): array {
+    $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(CONCAT(nombre, ' ', apellido))) AS nombreCompleto, UPPER(TRIM(nombre)) AS solo_nombre FROM arbitro");
+    $map = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $map[$row['nombreCompleto']] = $row['idArbitro'];
+        $map[$row['solo_nombre']]    = $row['idArbitro'];
     }
-    
-    $meses = [
-        'enero'=>1,'febrero'=>2,'marzo'=>3,'abril'=>4,'mayo'=>5,'junio'=>6,
-        'julio'=>7,'agosto'=>8,'septiembre'=>9,'octubre'=>10,'noviembre'=>11,'diciembre'=>12
-    ];
+    return $map;
+}
 
-    if (preg_match('/(\d+)\s+de\s+(\w+)\s+de\s+(\d{4})/i', $f, $m)) {
-        $mes = $meses[strtolower($m[2])] ?? null;
-        if ($mes) {
-            return sprintf("%04d-%02d-%02d", $m[3], $mes, $m[1]);
+function cargarCategorias(PDO $conn): array {
+    $stmt = $conn->query("SELECT idCategoriaPagoArbitro, UPPER(TRIM(nombreCategoria)) AS nombre FROM categoriaPagoArbitro");
+    $map = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $map[$row['nombre']] = $row['idCategoriaPagoArbitro'];
+    }
+    return $map;
+}
+
+function cargarOCrearEquipos(PDO $conn, array $nombres): array {
+    if (empty($nombres)) return [];
+    $stmt = $conn->query("SELECT idEquipo, UPPER(TRIM(nombreEquipo)) AS nombre FROM equipo");
+    $map = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $map[$row['nombre']] = $row['idEquipo'];
+    }
+    foreach ($nombres as $nombre) {
+        $key = strtoupper(trim($nombre));
+        if (!isset($map[$key])) {
+            $ins = $conn->prepare("INSERT INTO equipo (nombreEquipo) VALUES (?)");
+            $ins->execute([$nombre]);
+            $map[$key] = $conn->lastInsertId();
         }
     }
-    
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $f)) {
-        return $f;
-    }
-    
-    if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $f, $m)) {
-        return sprintf("%04d-%02d-%02d", $m[3], $m[2], $m[1]);
-    }
+    return $map;
+}
 
+function cargarConflictos(PDO $conn, array $partidos): array {
+    $fechas = [];
+    foreach ($partidos as $p) {
+        $f = convertirFecha($p['FECHA'] ?? '');
+        if ($f) $fechas[] = $conn->quote($f);
+    }
+    if (empty($fechas)) return [];
+
+    $in   = implode(',', array_unique($fechas));
+    $stmt = $conn->query("SELECT idArbitro1, idArbitro2, idArbitro3, idArbitro4, fecha, hora FROM partido WHERE fecha IN ($in)");
+    $map  = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $hora = substr($row['hora'], 0, 8);
+        foreach (['idArbitro1','idArbitro2','idArbitro3','idArbitro4'] as $col) {
+            if (!empty($row[$col])) {
+                $map["{$row[$col]}_{$row['fecha']}_{$hora}"] = true;
+            }
+        }
+    }
+    return $map;
+}
+
+function insertarPartidosEnBatch(PDO $conn, array $filas): int {
+    $total = 0;
+    foreach (array_chunk($filas, 50) as $chunk) {
+        $ph  = implode(',', array_fill(0, count($chunk), '(?,?,?,?,?,?,?,?,?,?,?,?)'));
+        $sql = "INSERT INTO partido
+                    (idEquipo1,idEquipo2,fecha,hora,idCategoriaPagoArbitro,idTorneoPartido,
+                     idArbitro1,idArbitro2,idArbitro3,idArbitro4,canchaLugar,categoriaText)
+                VALUES $ph";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute(array_merge(...$chunk));
+        $total += $stmt->rowCount();
+    }
+    return $total;
+}
+
+function buscarIdEnMap(array $map, ?string $nombre): ?int {
+    if (empty($nombre)) return null;
+    $key = strtoupper(trim($nombre));
+    if (isset($map[$key])) return $map[$key];
+    foreach ($map as $k => $v) {
+        if (str_contains($k, $key) || str_contains($key, $k)) return $v;
+    }
     return null;
 }
 
-function categoriaExiste(PDO $conn, $idCategoria) {
-    $stmt = $conn->prepare("SELECT idCategoriaPagoArbitro FROM categoriaPagoArbitro WHERE idCategoriaPagoArbitro = ?");
-    $stmt->execute([$idCategoria]);
-    return $stmt->fetch(PDO::FETCH_COLUMN) !== false;
+function obtenerNombreDeMap(array $map, int $id): string {
+    $flipped = array_flip($map);
+    return $flipped[$id] ?? "Árbitro #$id";
 }
 
-function buscarCategoriaPorNombre(PDO $conn, $nombre) {
-    if (!$nombre) return null;
-
-    $stmt = $conn->prepare("
-        SELECT idCategoriaPagoArbitro 
-        FROM categoriaPagoArbitro 
-        WHERE UPPER(nombreCategoria) = UPPER(:nombre)
-        LIMIT 1
-    ");
-    
-    $stmt->bindValue(':nombre', trim($nombre), PDO::PARAM_STR);
-    $stmt->execute();
-    
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    if ($id !== false) {
-        return $id;
+function convertirFecha($f): ?string {
+    if (empty($f)) return null;
+    if (is_numeric($f) && $f > 1000) {
+        $d = new DateTime();
+        $d->setTimestamp((int)(($f - 25569) * 86400));
+        return $d->format('Y-m-d');
     }
-
-    $stmt = $conn->prepare("
-        SELECT idCategoriaPagoArbitro 
-        FROM categoriaPagoArbitro 
-        WHERE UPPER(nombreCategoria) LIKE UPPER(:nombre)
-        LIMIT 1
-    ");
-    
-    $stmt->bindValue(':nombre', "%$nombre%", PDO::PARAM_STR);
-    $stmt->execute();
-    
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    if ($id === false) {
-        error_log("⚠️ Categoría NO encontrada: '$nombre'");
+    $meses = ['enero'=>1,'febrero'=>2,'marzo'=>3,'abril'=>4,'mayo'=>5,'junio'=>6,
+              'julio'=>7,'agosto'=>8,'septiembre'=>9,'octubre'=>10,'noviembre'=>11,'diciembre'=>12];
+    if (preg_match('/(\d+)\s+de\s+(\w+)\s+de\s+(\d{4})/i', $f, $m)) {
+        $mes = $meses[strtolower($m[2])] ?? null;
+        if ($mes) return sprintf("%04d-%02d-%02d", $m[3], $mes, $m[1]);
     }
-    
-    return $id ?: null;
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $f)) return $f;
+    if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $f, $m)) return sprintf("%04d-%02d-%02d", $m[3], $m[2], $m[1]);
+    return null;
 }
 
-function arbitroExiste(PDO $conn, $nombre) {
-    if (!$nombre) return true;
-
-    $stmt = $conn->prepare("
-        SELECT idArbitro 
-        FROM arbitro 
-        WHERE UPPER(nombre) LIKE UPPER(:n) 
-           OR UPPER(CONCAT(nombre, ' ', apellido)) LIKE UPPER(:n)
-        LIMIT 1
-    ");
-    
-    $searchTerm = "%$nombre%";
-    $stmt->bindValue(':n', $searchTerm, PDO::PARAM_STR);
-    $stmt->execute();
-
-    $resultado = $stmt->fetch(PDO::FETCH_COLUMN) !== false;
-    
-    if (!$resultado) {
-        error_log("⚠️ Árbitro NO encontrado: '$nombre'");
+function convertirHora($hora): string {
+    if (is_numeric($hora) && $hora < 1 && $hora > 0) {
+        $min = round($hora * 24 * 60);
+        return sprintf("%02d:%02d:00", floor($min / 60), $min % 60);
     }
-
-    return $resultado;
-}
-
-function buscarArbitro(PDO $conn, $nombre) {
-    if (!$nombre) return null;
-
-    $stmt = $conn->prepare("
-        SELECT idArbitro 
-        FROM arbitro 
-        WHERE UPPER(CONCAT(nombre, ' ', apellido)) LIKE UPPER(:n)
-        LIMIT 1
-    ");
-    
-    $searchTerm = "%$nombre%";
-    $stmt->bindValue(':n', $searchTerm, PDO::PARAM_STR);
-    $stmt->execute();
-
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    if ($id !== false) {
-        return $id;
+    if (is_string($hora) && preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i', $hora, $m)) {
+        $h = (int)$m[1]; $min = (int)$m[2];
+        if (!empty($m[3])) {
+            if (strtoupper($m[3]) === 'PM' && $h < 12) $h += 12;
+            if (strtoupper($m[3]) === 'AM' && $h === 12) $h = 0;
+        }
+        return sprintf("%02d:%02d:00", $h, $min);
     }
-
-    $stmt = $conn->prepare("
-        SELECT idArbitro 
-        FROM arbitro 
-        WHERE UPPER(nombre) LIKE UPPER(:n)
-        LIMIT 1
-    ");
-    
-    $stmt->bindValue(':n', $searchTerm, PDO::PARAM_STR);
-    $stmt->execute();
-
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    if ($id === false) {
-        error_log("⚠️ No se encontró árbitro: '$nombre'");
-    }
-
-    return $id ?: null;
-}
-
-function buscarOCrearEquipo(PDO $conn, $nombre) {
-    if (!$nombre) return null;
-
-    $stmt = $conn->prepare("
-        SELECT idEquipo 
-        FROM equipo 
-        WHERE UPPER(nombreEquipo) LIKE UPPER(:nombre)
-        LIMIT 1
-    ");
-    
-    $stmt->bindValue(':nombre', "%$nombre%", PDO::PARAM_STR);
-    $stmt->execute();
-
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    if ($id !== false) {
-        return $id;
-    }
-
-    $stmtInsert = $conn->prepare("INSERT INTO equipo (nombreEquipo) VALUES (:nombre)");
-    $stmtInsert->execute([':nombre' => $nombre]);
-    
-    return $conn->lastInsertId();
-}
-
-function buscarOCrearTorneo(PDO $conn, $torneo) {
-    if (!$torneo) return null;
-
-    $stmt = $conn->prepare("
-        SELECT idTorneo 
-        FROM torneo 
-        WHERE UPPER(nombreTorneo) LIKE UPPER(:n)
-        LIMIT 1
-    ");
-    $stmt->bindValue(':n', "%$torneo%", PDO::PARAM_STR);
-    $stmt->execute();
-
-    $id = $stmt->fetch(PDO::FETCH_COLUMN);
-    
-    if ($id !== false) {
-        return $id;
-    }
-
-    $stmtInsert = $conn->prepare("INSERT INTO torneo (nombreTorneo) VALUES (:nombre)");
-    $stmtInsert->execute([':nombre' => $torneo]);
-    
-    return $conn->lastInsertId();
-}
-
-/**
- * ✅ NUEVA FUNCIÓN: Verificar conflictos de horario
- */
-function tieneConflictoHorario(PDO $conn, $idArbitro, $fecha, $hora) {
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) 
-        FROM partido 
-        WHERE fecha = :fecha 
-          AND hora = :hora
-          AND (idArbitro1 = :id OR idArbitro2 = :id OR idArbitro3 = :id OR idArbitro4 = :id)
-    ");
-    
-    $stmt->execute([
-        ':fecha' => $fecha,
-        ':hora' => $hora,
-        ':id' => $idArbitro
-    ]);
-    
-    return $stmt->fetch(PDO::FETCH_COLUMN) > 0;
-}
-
-/**
- * ✅ NUEVA FUNCIÓN: Obtener nombre del árbitro para mensajes de error
- */
-function obtenerNombreArbitro(PDO $conn, $idArbitro) {
-    $stmt = $conn->prepare("SELECT CONCAT(nombre, ' ', apellido) FROM arbitro WHERE idArbitro = ?");
-    $stmt->execute([$idArbitro]);
-    return $stmt->fetch(PDO::FETCH_COLUMN) ?: "Árbitro #$idArbitro";
+    if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $hora)) return $hora;
+    return '00:00:00';
 }
