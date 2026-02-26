@@ -9,6 +9,66 @@
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
+/* ── Calendar event chip ── */
+    .fc-event-custom        { display:flex; flex-direction:column; line-height:1.25; padding:1px 3px; }
+    .fc-ev-hora             { font-size:10px; opacity:.85; font-weight:600; }
+    .fc-ev-nombre           { font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fc-ev-count            { font-size:10px; background:rgba(255,255,255,.25); border-radius:8px; padding:0 5px; align-self:flex-start; margin-top:1px; }
+
+    /* ── Modal overlay ── */
+    #miModal {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.55); z-index:9999;
+      align-items:flex-start; justify-content:center;
+      padding:20px 10px; overflow-y:auto;
+    }
+    .modal-content {
+      background:#fff; border-radius:12px; width:100%; max-width:1100px;
+      box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden;
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn { from { transform:translateY(-20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+    .modal-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px; background:#1e293b; color:#fff;
+    }
+    .modal-header h2 { margin:0; font-size:16px; font-weight:600; }
+    #cerrarModal {
+      background:none; border:none; color:#fff; font-size:20px;
+      cursor:pointer; line-height:1; padding:0 4px; opacity:.8;
+    }
+    #cerrarModal:hover { opacity:1; }
+
+    #cuerpoModal { padding:16px 20px; max-height:75vh; overflow-y:auto; }
+
+    /* ── Tabla partidos ── */
+    .tabla-partidos th { font-size:12px; white-space:nowrap; }
+    .tabla-partidos td { font-size:12px; vertical-align:middle; }
+
+    /* ── Botones de acción ── */
+    .acciones-td   { white-space:nowrap; }
+    .btn-acc       { border:none; background:none; cursor:pointer; font-size:16px; padding:2px 4px; border-radius:4px; transition:background .15s; }
+    .btn-acc:hover { background:#f1f5f9; }
+    .btn-obs-activa { opacity:1; }
+
+    /* ── Observación inline ── */
+    .fila-obs    { background:#fefce8; }
+    .obs-texto   { padding:6px 12px !important; color:#713f12; font-size:12px; }
+    .obs-badge   { font-weight:700; margin-right:4px; }
+
+    .obs-editor-td, .edit-editor-td { background:#f8fafc; padding:10px 14px !important; }
+    .obs-textarea  { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:8px; font-size:13px; resize:vertical; }
+    .obs-actions   { display:flex; gap:8px; margin-top:8px; }
+    .btn-guardar-obs  { background:#2563eb; color:#fff; border:none; border-radius:6px; padding:5px 14px; cursor:pointer; font-size:13px; font-weight:600; }
+    .btn-guardar-obs:hover { background:#1d4ed8; }
+    .btn-cancelar-obs { background:#e2e8f0; color:#475569; border:none; border-radius:6px; padding:5px 14px; cursor:pointer; font-size:13px; }
+
+    /* ── Edit inline ── */
+    .edit-grid  { display:flex; gap:12px; flex-wrap:wrap; }
+    .edit-grid label { display:flex; flex-direction:column; font-size:12px; font-weight:600; color:#374151; gap:3px; }
+    .edit-input { border:1px solid #cbd5e1; border-radius:6px; padding:6px 10px; font-size:13px; }
+
 .fc .fc-toolbar-title {
     color: #0d6efd;
     font-weight: 600;
@@ -101,7 +161,7 @@
 
 /* Cabecera */
 .table thead th {
-  background: #f5f5f5;
+  background: #000000;
   padding: 10px;
   font-weight: 600;
   border-bottom: 2px solid #ddd;

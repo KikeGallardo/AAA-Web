@@ -61,27 +61,43 @@ switch ($accion) {
     $stmt->execute();
     $result = $stmt->get_result();
 
-    $eventos = [];
-
+    // Agrupar por torneo+fecha: 1 evento por torneo por día
+    $grupos = [];
     while ($row = $result->fetch_assoc()) {
-
-      $start = $row["fecha"] . "T" . $row["hora"];
-      $titulo = $row["torneo"];
-
-      $eventos[] = [
-        "id"    => $row["idPartido"],
-        "title" => $titulo,
-        "start" => $start,
-        "extendedProps" => [
-            "cancha"    => $row["canchaLugar"],
-            "categoria" => $row["categoriaText"],
-            "mes"       => (new DateTime($row["fecha"]))->format("m"),
-            "idTorneo"  => $row["idTorneo"]   // ← AGREGAR ESTO
-        ]
-    ];
+        $key = $row["idTorneo"] . "_" . $row["fecha"];
+        if (!isset($grupos[$key])) {
+            $grupos[$key] = [
+                "idTorneo"  => $row["idTorneo"],
+                "torneo"    => $row["torneo"],
+                "fecha"     => $row["fecha"],
+                "horaMin"   => $row["hora"],   // primera hora del día
+                "count"     => 0
+            ];
+        }
+        // guardar la hora más temprana como hora del evento
+        if ($row["hora"] < $grupos[$key]["horaMin"]) {
+            $grupos[$key]["horaMin"] = $row["hora"];
+        }
+        $grupos[$key]["count"]++;
     }
 
-    echo json_encode($eventos);
+    $eventos = [];
+    foreach ($grupos as $g) {
+        // Hora en formato 12h AM/PM para el título
+        $horaFormateada = date("g:i A", strtotime($g["horaMin"]));
+        $eventos[] = [
+            "id"    => $g["idTorneo"] . "_" . $g["fecha"],
+            "title" => $g["torneo"],
+            "start" => $g["fecha"] . "T" . $g["horaMin"],
+            "extendedProps" => [
+                "idTorneo"   => $g["idTorneo"],
+                "horaInicio" => $horaFormateada,
+                "count"      => $g["count"]
+            ]
+        ];
+    }
+
+    echo json_encode(array_values($eventos));
     break;
 
   case "obtener_partido":
@@ -286,6 +302,50 @@ switch ($accion) {
       }
       echo json_encode($partidos);
       break;
+
+    case 'guardar_observacion':
+    $idPartido   = isset($_POST['idPartido']) ? (int)$_POST['idPartido'] : 0;
+    $observacion = trim($_POST['observacion'] ?? '');
+    if ($idPartido <= 0) { echo json_encode(['status'=>'error','msg'=>'ID inválido']); exit; }
+    $stmt = $conn->prepare('UPDATE partido SET observaciones = ? WHERE idPartido = ?');
+    $stmt->bind_param('si', $observacion, $idPartido);
+    echo $stmt->execute()
+        ? json_encode(['status'=>'ok'])
+        : json_encode(['status'=>'error','msg'=>$stmt->error]);
+    $stmt->close();
+    break;
+
+    case 'listar_arbitros':
+    $res = $conn->query('SELECT idArbitro, CONCAT(nombre, " ", apellido) AS nombreCompleto FROM arbitro ORDER BY nombre, apellido');
+    $lista = [];
+    while ($row = $res->fetch_assoc()) $lista[] = $row;
+    echo json_encode($lista);
+    break;
+
+    case 'actualizar_partido':
+    $idPartido     = isset($_POST['idPartido'])     ? (int)$_POST['idPartido']     : 0;
+    $hora          = $_POST['hora']          ?? '';
+    $canchaLugar   = trim($_POST['canchaLugar']   ?? '');
+    $categoriaText = trim($_POST['categoriaText'] ?? '');
+    $idEquipo1     = isset($_POST['idEquipo1'])     ? (int)$_POST['idEquipo1']     : null;
+    $idEquipo2     = isset($_POST['idEquipo2'])     ? (int)$_POST['idEquipo2']     : null;
+    $idArbitro1    = !empty($_POST['idArbitro1'])   ? (int)$_POST['idArbitro1']    : null;
+    $idArbitro2    = !empty($_POST['idArbitro2'])   ? (int)$_POST['idArbitro2']    : null;
+    $idArbitro3    = !empty($_POST['idArbitro3'])   ? (int)$_POST['idArbitro3']    : null;
+    $idArbitro4    = !empty($_POST['idArbitro4'])   ? (int)$_POST['idArbitro4']    : null;
+    if ($idPartido <= 0) { echo json_encode(['status'=>'error','msg'=>'ID inválido']); exit; }
+    $stmt = $conn->prepare('UPDATE partido SET hora=?, canchaLugar=?, categoriaText=?, idArbitro1=?, idArbitro2=?, idArbitro3=?, idArbitro4=? WHERE idPartido=?');
+    $stmt->bind_param('sssiiiis', $hora, $canchaLugar, $categoriaText, $idArbitro1, $idArbitro2, $idArbitro3, $idArbitro4, $idPartido);
+    if ($stmt->execute()) {
+        // Devolver los nombres actualizados para refrescar la tabla
+        $r = $conn->query("SELECT CONCAT(a1.nombre,' ',a1.apellido) n1, CONCAT(a2.nombre,' ',a2.apellido) n2, CONCAT(a3.nombre,' ',a3.apellido) n3, CONCAT(a4.nombre,' ',a4.apellido) n4 FROM partido p LEFT JOIN arbitro a1 ON p.idArbitro1=a1.idArbitro LEFT JOIN arbitro a2 ON p.idArbitro2=a2.idArbitro LEFT JOIN arbitro a3 ON p.idArbitro3=a3.idArbitro LEFT JOIN arbitro a4 ON p.idArbitro4=a4.idArbitro WHERE p.idPartido=$idPartido");
+        $nombres = $r ? $r->fetch_assoc() : [];
+        echo json_encode(['status'=>'ok', 'nombres'=>$nombres]);
+    } else {
+        echo json_encode(['status'=>'error','msg'=>$stmt->error]);
+    }
+    $stmt->close();
+    break;
 
     case 'eliminar_partido':
     $idPartido = isset($_POST['idPartido']) ? (int)$_POST['idPartido'] : 0;

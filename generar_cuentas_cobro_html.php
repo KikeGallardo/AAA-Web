@@ -39,6 +39,7 @@ $sql = "
         p.hora,
         p.canchaLugar,
         p.categoriaText,
+        p.observaciones,
         e1.nombreEquipo AS equipoLocal,
         e2.nombreEquipo AS equipoVisitante,
         t.nombreTorneo,
@@ -162,6 +163,7 @@ while ($partido = $partidos->fetch_assoc()) {
         'fecha'        => formatearFecha($partido['fecha']),
         'torneo'       => strtoupper($partido['nombreTorneo']),
         'categoria'    => strtoupper($partido['categoriaText'] ?: $partido['nombreCategoria']),
+        'observaciones'=> $partido['observaciones'],
         'rol'          => $rol,
         'tarifa'       => $tarifa,
         'tipopago'     => $tipoPagoTexto,
@@ -176,6 +178,7 @@ $totalPartidos  = count($partidos_data);
 $nombreCompleto = strtoupper(($arbitroInfo['nombre'] ?? '').' '.($arbitroInfo['apellido'] ?? ''));
 $categoria      = strtoupper($arbitroInfo['categoriaArbitro'] ?? '');
 $cedula         = $arbitroInfo['cedula'] ?? '';
+$observaciones   = $partidos_data[0]['observaciones'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -362,8 +365,8 @@ body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:
         <!-- Observaciones -->
         <div class="fila">
             <div class="col-izq">
-                <div class="lbl">Observaciones:</div>
-                <div class="val"></div>
+                <div class="lbl">Observaciones: </div>
+                <div class="val"><?= h($p['observaciones'] ?? '') ?></div>
             </div>
         </div>
 
