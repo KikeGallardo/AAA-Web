@@ -413,11 +413,73 @@ require_once "assets/header.php";
         .btn-confirmar { background: var(--primary); color: white; }
         .btn-cancelar-modal { background: #e5e7eb; color: #374151; }
 
+        /* ── PANEL EXPORTAR EXCEL ── */
+        .export-panel {
+            max-width: 860px;
+            margin: 0 auto 2rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.8rem 2rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,.06);
+        }
+        .export-panel h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .export-panel h2 i { font-size: 1.1rem; color: #057a55; }
+        .export-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem;
+        }
+        .btn-exportar {
+            width: 100%;
+            margin-top: 1.2rem;
+            padding: .85rem;
+            background: #057a55;
+            color: #fff;
+            border: none;
+            border-radius: 9px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            transition: background .2s, transform .15s, box-shadow .2s;
+            box-shadow: 0 2px 8px rgba(5,122,85,.25);
+            text-decoration: none;
+        }
+        .btn-exportar:hover {
+            background: #046647;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(5,122,85,.35);
+        }
+        .btn-exportar i { font-size: 1.2rem; }
+        .export-hint {
+            margin-top: .8rem;
+            font-size: .8rem;
+            color: var(--muted);
+            text-align: center;
+        }
+
         @media (max-width: 680px) {
             .filters-panel { margin: 1rem; padding: 1.2rem; }
             .filter-grid { grid-template-columns: 1fr; }
             .filter-full { grid-column: span 1; }
             .results-panel { margin: 0 1rem 2rem; }
+            .export-panel { margin: 0 1rem 2rem; padding: 1.2rem; }
+            .export-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -426,6 +488,41 @@ require_once "assets/header.php";
 <div class="page-title">
     <h1>Cuentas de Cobro</h1>
     <p>Selecciona un rango de fechas y los torneos para generar las cuentas de árbitros</p>
+</div>
+
+<!-- EXPORTAR A EXCEL -->
+<div class="export-panel">
+    <h2><i class="material-icons">table_view</i> Exportar programación a Excel</h2>
+    <div class="export-grid">
+        <div class="filter-group">
+            <label>Fecha inicio</label>
+            <input type="date" id="exFechaInicio" required>
+        </div>
+        <div class="filter-group">
+            <label>Fecha fin</label>
+            <input type="date" id="exFechaFin" required>
+        </div>
+        <div class="filter-group filter-full" style="grid-column: span 2;">
+            <label>Torneos</label>
+            <select id="exTorneosSelect" multiple>
+                <?php
+                // Re-fetch torneos for the export section
+                $torneos2 = $conexion->query("SELECT idTorneo, nombreTorneo FROM torneo ORDER BY nombreTorneo");
+                while ($t = $torneos2->fetch_assoc()):
+                ?>
+                    <option value="<?= $t['idTorneo'] ?>">
+                        <?= h($t['nombreTorneo']) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+            <span class="select-hint">Sin selección = todos los torneos</span>
+        </div>
+    </div>
+    <button class="btn-exportar" onclick="exportarExcel()">
+        <i class="material-icons">download</i>
+        Descargar Excel de programación
+    </button>
+    <p class="export-hint">Genera un archivo .xls con la programación de árbitros, organizado por día — igual al formato de referencia.</p>
 </div>
 
 <!-- FILTROS -->
@@ -481,17 +578,37 @@ require_once "assets/header.php";
 </div>
 
 <script>
-// Fechas por defecto: primer día del mes → hoy
+// Fechas por defecto: primer día del mes → hoy (para ambos paneles)
 (function () {
     const hoy  = new Date();
     const ini  = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     const fmt  = d => d.toISOString().split('T')[0];
-    document.getElementById('fechaInicio').value = fmt(ini);
-    document.getElementById('fechaFin').value    = fmt(hoy);
+    document.getElementById('fechaInicio').value   = fmt(ini);
+    document.getElementById('fechaFin').value      = fmt(hoy);
+    document.getElementById('exFechaInicio').value = fmt(ini);
+    document.getElementById('exFechaFin').value    = fmt(hoy);
 })();
 
 // Mapa idArbitro → { nombre, total } para actualizaciones en vivo
 const estado = {};
+
+// ── Exportar programación a Excel ────────────────────────────
+function exportarExcel() {
+    const fi = document.getElementById('exFechaInicio').value;
+    const ff = document.getElementById('exFechaFin').value;
+
+    if (!fi || !ff) { alert('Por favor selecciona un rango de fechas para exportar'); return; }
+    if (ff < fi)    { alert('La fecha fin no puede ser anterior a la fecha inicio'); return; }
+
+    const sel     = document.getElementById('exTorneosSelect');
+    const torneos = Array.from(sel.selectedOptions).map(o => o.value);
+
+    const params = new URLSearchParams({ fechaInicio: fi, fechaFin: ff });
+    torneos.forEach(id => params.append('torneos[]', id));
+
+    const url = `exportar_programacion.php?${params.toString()}`;
+    window.location.href = url;
+}
 
 // ── Buscar árbitros ───────────────────────────────────────────
 async function buscarArbitros() {

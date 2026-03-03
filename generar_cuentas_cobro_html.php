@@ -190,58 +190,75 @@ $observaciones   = $partidos_data[0]['observaciones'] ?? '';
     .no-print { display:none !important; }
     body { margin:0; padding:0; background:white; }
     @page { size: letter portrait; margin: 10mm 10mm 10mm 10mm; }
-    .footer-print { position:fixed; bottom:0; left:10mm; right:10mm; margin-top:30mm; }
-    .hoja { margin-bottom:0; padding-bottom:0; box-shadow:none; }
+    .hoja { 
+        margin:0 !important; 
+        padding:4mm 7mm 4mm !important; 
+        box-shadow:none !important; 
+        width:100% !important;
+        page-break-after: always;
+        display:flex;
+        flex-direction:column;
+        min-height: 257mm;
+    }
+    .hoja:last-child { page-break-after: auto; }
+    .hoja-contenido { flex:1; }
+    .footer-hoja { margin-top:auto; }
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:11px; color:#000; }
+body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:15px; color:#000; }
 
 .toolbar {
     font-family:Arial,sans-serif; background:#fff; padding:7px 16px;
     margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,.2);
     display:flex; justify-content:space-between; align-items:center;
 }
-.resumen { font-size:12px; }
+.resumen { font-size:15px; }
 .resumen strong { color:#1a56db; }
-.btn { padding:5px 13px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:12px; margin-left:5px; font-family:Arial,sans-serif; }
+.btn { padding:5px 13px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:15px; margin-left:5px; font-family:Arial,sans-serif; }
 .btn-print { background:#10b981; color:#fff; }
 .btn-back  { background:#6b7280; color:#fff; }
 
-.hoja { width:190mm; margin:0 auto 10px; background:#fff; padding:5mm 7mm 6mm; box-shadow:0 2px 10px rgba(0,0,0,.2); }
+.hoja { 
+    width:190mm; margin:0 auto 10px; background:#fff; padding:4mm 7mm 4mm; 
+    box-shadow:0 2px 10px rgba(0,0,0,.2);
+    display:flex; flex-direction:column;
+}
+.hoja-contenido { flex:1; }
+.footer-hoja { margin-top:auto; }
 
-.enc { display:flex; align-items:center; gap:3mm; border-bottom:2.5px solid #000; padding-bottom:2mm; margin-bottom:2mm; }
-.enc img { width:16mm; height:16mm; }
+.enc { display:flex; align-items:center; gap:3mm; border-bottom:2.5px solid #000; padding-bottom:1.5mm; margin-bottom:1.5mm; }
+.enc img { width:14mm; height:14mm; }
 .enc-texto { flex:1; text-align:center; }
 .enc-texto h1 { font-size:14px; font-weight:bold; }
-.enc-texto h2 { font-size:11px; font-weight:bold; margin-top:1mm; }
+.enc-texto h2 { font-size:1px; font-weight:bold; margin-top:0.5mm; }
 
-.arb-row { display:flex; justify-content:space-between; align-items:center; padding:1.5mm 0; border-bottom:1px solid #444; margin-bottom:2mm; font-size:11px; }
+.arb-row { display:flex; justify-content:space-between; align-items:center; padding:0.8mm 0; border-bottom:1px solid #444; margin-bottom:1mm; font-size:11px; }
 .arb-row .arb-nombre { font-weight:bold; font-size:12px; }
 .arb-row .arb-datos  { display:flex; gap:5mm; }
 
-.concepto { font-weight:bold; font-size:10px; border-bottom:2px solid #000; padding-bottom:1.5mm; margin-bottom:3mm; letter-spacing:.01em; }
+.concepto { font-weight:bold; font-size:10px; border-bottom:2.5px solid #000; padding-bottom:1mm; margin-bottom:2mm; letter-spacing:.01em; }
 
-.cuadro { border:1px solid #666; margin-bottom:3mm; page-break-inside:avoid; }
-.fila { display:flex; border-bottom:1px solid #666; min-height:5.5mm; }
+.cuadro { border:1px solid #666; margin-bottom:2mm; page-break-inside:avoid; }
+.fila { display:flex; border-bottom:1px solid #666; min-height:4.5mm; }
 .fila:last-child { border-bottom:none; }
-.lbl { background:#f0f0f0; font-weight:bold; font-size:10px; padding:0.8mm 2mm; display:flex; align-items:center; white-space:nowrap; border-right:1px solid #666; min-width:19mm; flex-shrink:0; }
-.val { font-size:10.5px; padding:0.8mm 2mm; display:flex; align-items:center; flex:1; }
+.lbl { background:#f0f0f0; font-weight:bold; font-size:9.5px; padding:0.5mm 2mm; display:flex; align-items:center; white-space:nowrap; border-right:1px solid #666; min-width:19mm; flex-shrink:0; }
+.val { font-size:9.5px; padding:0.5mm 2mm; display:flex; align-items:center; flex:1; }
 .val.negrita { font-weight:bold; }
 .fila-equipos .lbl { min-width:19mm; }
-.fila-equipos .val { justify-content:center; font-weight:bold; font-size:11px; }
+.fila-equipos .val { justify-content:center; font-weight:bold; font-size:10px; }
 .col-izq { display:flex; flex:1; border-right:1px solid #666; }
 .col-der  { display:flex; flex:1; }
 .col-der .lbl { min-width:22mm; }
 
-.total-bloque { border:1px solid #000; margin-top:4mm; page-break-inside:avoid; }
-.total-fila { display:flex; border-bottom:1px solid #000; min-height:8mm; }
+.total-bloque { border:1px solid #000; margin-top:2mm; page-break-inside:avoid; }
+.total-fila { display:flex; border-bottom:1px solid #000; min-height:6mm; }
 .total-fila:last-child { border-bottom:none; }
-.tf-firma { flex:1; border-right:1px solid #000; padding:2mm 3mm; font-weight:bold; font-size:10.5px; display:flex; align-items:flex-end; justify-content:center; min-height:18mm; }
-.tf-total-lbl { width:22mm; border-right:1px solid #000; font-weight:bold; font-size:10.5px; display:flex; align-items:center; justify-content:center; padding:1mm; flex-shrink:0; }
-.tf-total-val { flex:1; font-size:15px; font-weight:bold; display:flex; align-items:center; justify-content:flex-end; padding:1mm 3mm; }
-.tf-obs { flex:1; border-right:1px solid #000; padding:1.5mm 3mm; font-size:10px; min-height:14mm; vertical-align:top; }
-.tf-aut { width:40mm; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:10.5px; }
+.tf-firma { flex:1; border-right:1px solid #000; padding:1.5mm 3mm; font-weight:bold; font-size:10px; display:flex; align-items:flex-end; justify-content:center; min-height:14mm; }
+.tf-total-lbl { width:22mm; border-right:1px solid #000; font-weight:bold; font-size:10px; display:flex; align-items:center; justify-content:center; padding:1mm; flex-shrink:0; }
+.tf-total-val { flex:1; font-size:14px; font-weight:bold; display:flex; align-items:center; justify-content:flex-end; padding:1mm 3mm; }
+.tf-obs { flex:1; border-right:1px solid #000; padding:1mm 3mm; font-size:10px; min-height:10mm; vertical-align:top; }
+.tf-aut { width:40mm; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:10px; }
 </style>
 </head>
 <body>
@@ -255,138 +272,207 @@ body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:
         Total: <strong>$<?= number_format($totalPagar, 0, ',', '.') ?></strong>
     </div>
     <div>
-        <button onclick="window.print()" class="btn btn-print">🖨️ Imprimir</button>
-        <button onclick="window.close()"  class="btn btn-back">✕ Cerrar</button>
+        <button onclick="paginarYImprimir()" class="btn btn-print">🖨️ Imprimir</button>
+        <button onclick="window.close()" class="btn btn-back">✕ Cerrar</button>
     </div>
 </div>
 
-<!-- HOJA -->
-<div class="hoja">
+<script>
+const PARTIDOS = <?= json_encode(array_map(function($p) {
+    return [
+        'equipos'      => $p['equipos'],
+        'hora'         => formatearHora($p['hora']),
+        'lugar'        => $p['lugar'],
+        'fecha'        => $p['fecha'],
+        'torneo'       => $p['torneo'],
+        'categoria'    => $p['categoria'],
+        'observaciones'=> $p['observaciones'] ?? '',
+        'rol'          => $p['rol'],
+        'tarifa'       => $p['tarifa'],
+        'tipopago'     => $p['tipopago'],
+        'arbitroPpal'  => $p['arbitroPpal'],
+        'asistente1'   => $p['asistente1'],
+        'emergente'    => $p['emergente'],
+    ];
+}, $partidos_data), JSON_UNESCAPED_UNICODE) ?>;
 
-    <!-- ENCABEZADO -->
+const TOTAL_PAGAR = <?= $totalPagar ?>;
+const NOMBRE      = <?= json_encode($nombreCompleto, JSON_UNESCAPED_UNICODE) ?>;
+const CEDULA_ARB  = <?= json_encode($cedula) ?>;
+const CATEGORIA   = <?= json_encode($categoria, JSON_UNESCAPED_UNICODE) ?>;
+const CUENTA_NUM  = <?= json_encode((string)$totalImpresiones) ?>;
+const LOGO_EXISTS = <?= file_exists('assets/img/logo.png') ? 'true' : 'false' ?>;
+
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str ?? '';
+    return d.innerHTML;
+}
+function fmt(n) {
+    return '$' + Number(n).toLocaleString('es-CO', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+function crearCuadroHTML(p) {
+    return `<div class="cuadro">
+        <div class="fila fila-equipos"><div class="lbl">Equipos:</div><div class="val">${esc(p.equipos)}</div></div>
+        <div class="fila">
+            <div class="col-izq"><div class="lbl">Hora:</div><div class="val">${esc(p.hora)}</div></div>
+            <div class="col-der"><div class="lbl">Designado:</div><div class="val negrita">${esc(p.rol)}</div><div class="lbl">Tarifa:</div><div class="val negrita">${fmt(p.tarifa)}</div></div>
+        </div>
+        <div class="fila">
+            <div class="col-izq"><div class="lbl">Lugar:</div><div class="val">${esc(p.lugar)}</div></div>
+            <div class="col-der"><div class="lbl">Árbitro:</div><div class="val">${esc(p.arbitroPpal)}</div></div>
+        </div>
+        <div class="fila">
+            <div class="col-izq"><div class="lbl">Fecha:</div><div class="val">${esc(p.fecha)}</div></div>
+            <div class="col-der"><div class="lbl">Asistente 1:</div><div class="val">${esc(p.asistente1)}</div></div>
+        </div>
+        <div class="fila">
+            <div class="col-izq"><div class="lbl">Torneo:</div><div class="val">${esc(p.torneo)}</div></div>
+            <div class="col-der"><div class="lbl">Emergente:</div><div class="val">${esc(p.emergente)}</div></div>
+        </div>
+        <div class="fila">
+            <div class="col-izq"><div class="lbl">Categoría:</div><div class="val">${esc(p.categoria)}</div></div>
+            <div class="col-der"><div class="lbl">Estado:</div><div class="val">${esc(p.tipopago)}</div></div>
+        </div>
+        <div class="fila">
+            <div class="col-izq"><div class="lbl" style="font-size:12px;">Observaciones:</div><div class="val" style="font-size:10px;">${esc(p.observaciones)}</div></div>
+        </div>
+    </div>`;
+}
+
+function crearEncabezadoHTML(numPag, totalPags) {
+    const logo = LOGO_EXISTS ? `<img src="assets/img/logo.png" alt="Logo AAA">` : '';
+    return `
     <div class="enc">
-        <?php if (file_exists('assets/img/logo.png')): ?>
-        <img src="assets/img/logo.png" alt="Logo AAA">
-        <?php endif; ?>
+        ${logo}
         <div class="enc-texto">
             <h1 style="font-size:24px;">Académia Antioqueña de Árbitros</h1>
             CONCEPTO: SERVICIO DE ARBITRAJE A LA CORPORACION A.A.A &nbsp; NIT:900302408-2
         </div>
     </div>
-
-    <!-- ÁRBITRO -->
     <div class="arb-row">
-        <span class="arb-nombre"><?= h($nombreCompleto) ?></span>
+        <span class="arb-nombre">${esc(NOMBRE)}</span>
+        <span class="arb-datos"><span style="font-size:14px;">Cédula: ${esc(CEDULA_ARB)}</span></span>
+        </div>
+        <div class="arb-row">
+        <span style="font-size:14px;">CAT: ${esc(CATEGORIA)}</span>
     </div>
-    <div class="arb-row">
-        <span style="font-size:14px;">CAT: <?= h($categoria) ?></span>
-        <span class="arb-datos">
-            <span style="font-size:14px;">Cédula: <?= h($cedula) ?></span>
-        </span>
-    </div>
+    <div class="concepto"><h3>CUENTA DE COBRO: ${esc(CUENTA_NUM)}</h3></div>
+    `;
+}
 
-    <!-- CONCEPTO -->
-    <div class="concepto">
-        <h3>CUENTA DE COBRO: <?= $totalImpresiones ?></h3>
-    </div>
-
-    <!-- CUADROS -->
-    <?php foreach ($partidos_data as $p): ?>
-    <div class="cuadro">
-
-        <!-- Equipos -->
-        <div class="fila fila-equipos">
-            <div class="lbl">Equipos:</div>
-            <div class="val"><?= h($p['equipos']) ?></div>
-        </div>
-
-        <!-- Hora | Designado | Tarifa -->
-        <div class="fila">
-            <div class="col-izq">
-                <div class="lbl">Hora:</div>
-                <div class="val"><?= h(formatearHora($p['hora'])) ?></div>
-            </div>
-            <div class="col-der">
-                <div class="lbl">Designado:</div>
-                <div class="val negrita"><?= h($p['rol']) ?></div>
-                <div class="lbl">Tarifa:</div>
-                <div class="val negrita">$<?= number_format($p['tarifa'], 0, ',', '.') ?></div>
-            </div>
-        </div>
-
-        <!-- Lugar | Árbitro principal -->
-        <div class="fila">
-            <div class="col-izq">
-                <div class="lbl">Lugar:</div>
-                <div class="val"><?= h($p['lugar']) ?></div>
-            </div>
-            <div class="col-der">
-                <div class="lbl">Árbitro:</div>
-                <div class="val"><?= h($p['arbitroPpal']) ?></div>
-            </div>
-        </div>
-
-        <!-- Fecha | Asistente 1 -->
-        <div class="fila">
-            <div class="col-izq">
-                <div class="lbl">Fecha:</div>
-                <div class="val"><?= h($p['fecha']) ?></div>
-            </div>
-            <div class="col-der">
-                <div class="lbl">Asistente 1:</div>
-                <div class="val"><?= h($p['asistente1']) ?></div>
-            </div>
-        </div>
-
-        <!-- Torneo | Emergente -->
-        <div class="fila">
-            <div class="col-izq">
-                <div class="lbl">Torneo:</div>
-                <div class="val"><?= h($p['torneo']) ?></div>
-            </div>
-            <div class="col-der">
-                <div class="lbl">Emergente:</div>
-                <div class="val"><?= h($p['emergente']) ?></div>
-            </div>
-        </div>
-
-        <!-- Categoría | Estado pago -->
-        <div class="fila">
-            <div class="col-izq">
-                <div class="lbl">Categoría:</div>
-                <div class="val"><?= h($p['categoria']) ?></div>
-            </div>
-            <div class="col-der">
-                <div class="lbl">Estado:</div>
-                <div class="val"><?= h($p['tipopago']) ?></div>
-            </div>
-        </div>
-
-        <!-- Observaciones -->
-        <div class="fila">
-            <div class="col-izq">
-                <div class="lbl">Observaciones: </div>
-                <div class="val"><?= h($p['observaciones'] ?? '') ?></div>
-            </div>
-        </div>
-
-    </div><!-- /cuadro -->
-    <?php endforeach; ?>
-
-    <!-- TOTAL FINAL -->
-    <div class="total-bloque footer-print">
+function crearFooterHTML(acumulado, esFinal) {
+    const label  = esFinal ? 'TOTAL' : 'SUBTOTAL';
+    const monto  = esFinal ? TOTAL_PAGAR : acumulado;
+    const continua = !esFinal ? ' &nbsp;·&nbsp; <em style="font-weight:normal;"></em>' : '';
+    return `
+    <div class="total-bloque footer-hoja" style="margin-top:2mm;">
         <div class="total-fila">
-            <div class="tf-firma">Firma y Cédula de Árbitro</div>
-            <div class="tf-total-lbl">TOTAL</div>
-            <div class="tf-total-val">$<?= number_format($totalPagar, 0, ',', '.') ?></div>
+            <div class="tf-firma" style="font-size:15px;">Firma y Cédula de Árbitro</div>
+            <div class="tf-total-lbl">${label}</div>
+            <div class="tf-total-val">${fmt(monto)}</div>
         </div>
         <div class="total-fila">
-            <div class="tf-obs"><strong>Observaciones</strong></div>
-            <div class="tf-aut">Autorizada</div>
+            <div class="tf-obs" style="font-size:15px;"><strong>Observaciones</strong>${continua}</div>
+            <div class="tf-aut" style="font-size:15px;">Autorizada</div>
         </div>
-    </div>
+    </div>`;
+}
 
-</div><!-- /hoja -->
+// Crea un div de medición oculto con ancho real de hoja
+function crearSonda() {
+    const s = document.createElement('div');
+    s.className = 'hoja';
+    // Anulamos min-height para que mida solo el contenido real
+    s.setAttribute('style', 'position:absolute!important;top:-9999px!important;left:0!important;visibility:hidden!important;min-height:0!important;height:auto!important;');
+    s.style.position   = 'absolute';
+    s.style.top        = '-9999px';
+    s.style.left       = '0';
+    s.style.visibility = 'hidden';
+    s.style.minHeight  = '0';
+    s.style.height     = 'auto';
+    document.body.appendChild(s);
+    return s;
+}
+
+function medirEnSonda(sonda, html) {
+    sonda.innerHTML = html;
+    return sonda.offsetHeight;
+}
+
+function paginar() {
+    const sonda = crearSonda();
+
+    // Ancho real de la hoja en px (lo da el navegador con su zoom actual)
+    const anchoPx = sonda.offsetWidth;
+
+    // Calculamos cuántos px equivale 1mm en este contexto real
+    const mmPx = anchoPx / 190; // la hoja mide 190mm de ancho
+
+    // Página carta: 279mm alto - 20mm márgenes @page - 8mm padding hoja = 251mm disponibles
+    const ALTO_PAGINA_PX = 251 * mmPx;
+
+    // Altura encabezado + footer
+    const altoFijo = medirEnSonda(sonda, crearEncabezadoHTML(1, 1) + crearFooterHTML(0, true));
+
+    // Espacio real para cuadros (5mm de seguridad)
+    const espacio = ALTO_PAGINA_PX - altoFijo - (-50 * mmPx);
+
+    // Altura de cada cuadro
+    const alturas = PARTIDOS.map(p => {
+        return medirEnSonda(sonda, crearCuadroHTML(p)) + (1 * mmPx); // +2mm margin-bottom
+    });
+
+    document.body.removeChild(sonda);
+
+    // Distribuir en páginas
+    const paginas = [];
+    let pag = [], usado = 0;
+    for (let i = 0; i < PARTIDOS.length; i++) {
+        if (usado + alturas[i] > espacio && pag.length > 0) {
+            paginas.push(pag); pag = []; usado = 0;
+        }
+        pag.push(i);
+        usado += alturas[i];
+    }
+    if (pag.length) paginas.push(pag);
+    return paginas;
+}
+
+function renderPaginas(paginas) {
+    const contenedor = document.getElementById('contenedor-hojas');
+    contenedor.innerHTML = '';
+    let acumulado = 0;
+    const total = paginas.length;
+
+    paginas.forEach((indices, idx) => {
+        const esFinal = idx === total - 1;
+        const grupo   = indices.map(i => PARTIDOS[i]);
+        acumulado    += grupo.reduce((s, p) => s + Number(p.tarifa), 0);
+
+        const hoja = document.createElement('div');
+        hoja.className = 'hoja';
+        hoja.innerHTML =
+            crearEncabezadoHTML(idx + 1, total) +
+            `<div class="hoja-contenido">${grupo.map(crearCuadroHTML).join('')}</div>` +
+            crearFooterHTML(acumulado, esFinal) +
+            `<div style="text-align:right;font-size:10px;margin-top:2mm;">Página ${idx + 1} de ${total}</div>`
+            ;
+        contenedor.appendChild(hoja);
+    });
+}
+
+function paginarYImprimir() {
+    renderPaginas(paginar());
+    setTimeout(() => window.print(), 250);
+}
+
+window.addEventListener('DOMContentLoaded', () => renderPaginas(paginar()));
+</script>
+
+<div id="contenedor-hojas"></div>
+
 
 </body>
 </html>
