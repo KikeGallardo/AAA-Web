@@ -189,10 +189,10 @@ $observaciones   = $partidos_data[0]['observaciones'] ?? '';
 @media print {
     .no-print { display:none !important; }
     body { margin:0; padding:0; background:white; }
-    @page { size: letter portrait; margin: 10mm 10mm 10mm 10mm; }
+    @page { size: letter portrait; margin: 14mm 10mm 0mm 10mm; }
     .hoja { 
         margin:0 !important; 
-        padding:4mm 7mm 4mm !important; 
+        padding:4mm 7mm 12mm !important; 
         box-shadow:none !important; 
         width:100% !important;
         page-break-after: always;
@@ -203,6 +203,7 @@ $observaciones   = $partidos_data[0]['observaciones'] ?? '';
     .hoja:last-child { page-break-after: auto; }
     .hoja-contenido { flex:1; }
     .footer-hoja { margin-top:auto; }
+    
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -250,21 +251,22 @@ body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:
 .col-izq { display:flex; flex:1; border-right:1px solid #666; }
 .col-der  { display:flex; flex:1; }
 .col-der .lbl { min-width:22mm; }
+.fila > .col-izq:only-child { border-right:none; }
 
 .total-bloque { border:1px solid #000; margin-top:2mm; page-break-inside:avoid; }
-.total-fila { display:flex; border-bottom:1px solid #000; min-height:6mm; }
+.total-fila { display:flex; border-bottom:1px solid #000; min-height:5mm; }
 .total-fila:last-child { border-bottom:none; }
-.tf-firma { flex:1; border-right:1px solid #000; padding:1.5mm 3mm; font-weight:bold; font-size:10px; display:flex; align-items:flex-end; justify-content:center; min-height:14mm; }
+.tf-firma { flex:1; border-right:1px solid #000; padding:1.5mm 3mm; font-weight:bold; font-size:10px; display:flex; align-items:flex-end; justify-content:center; min-height:16mm;}
 .tf-total-lbl { width:22mm; border-right:1px solid #000; font-weight:bold; font-size:10px; display:flex; align-items:center; justify-content:center; padding:1mm; flex-shrink:0; }
 .tf-total-val { flex:1; font-size:14px; font-weight:bold; display:flex; align-items:center; justify-content:flex-end; padding:1mm 3mm; }
-.tf-obs { flex:1; border-right:1px solid #000; padding:1mm 3mm; font-size:10px; min-height:10mm; vertical-align:top; }
+.tf-obs { flex:1; border-right:1px solid #000; padding:1mm 3mm; font-size:10px;  vertical-align:top; min-height:16mm;}
 .tf-aut { width:40mm; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:10px; }
 </style>
 </head>
 <body>
 
 <!-- TOOLBAR -->
-<div class="toolbar no-print">
+<!-- <div class="toolbar no-print">
     <div class="resumen">
         <strong><?= h($nombreCompleto) ?></strong> &nbsp;|&nbsp;
         CC: <?= h($cedula) ?> &nbsp;|&nbsp;
@@ -275,7 +277,7 @@ body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:
         <button onclick="paginarYImprimir()" class="btn btn-print">🖨️ Imprimir</button>
         <button onclick="window.close()" class="btn btn-back">✕ Cerrar</button>
     </div>
-</div>
+</div> -->
 
 <script>
 const PARTIDOS = <?= json_encode(array_map(function($p) {
@@ -292,6 +294,7 @@ const PARTIDOS = <?= json_encode(array_map(function($p) {
         'tipopago'     => $p['tipopago'],
         'arbitroPpal'  => $p['arbitroPpal'],
         'asistente1'   => $p['asistente1'],
+        'asistente2'   => $p['asistente2'],
         'emergente'    => $p['emergente'],
     ];
 }, $partidos_data), JSON_UNESCAPED_UNICODE) ?>;
@@ -313,41 +316,59 @@ function fmt(n) {
 }
 
 function crearCuadroHTML(p) {
+    // Construir lista de miembros del equipo SIN el protagonista, en orden
+    const todosMiembros = [
+        { lbl: 'Árbitro:',     val: p.arbitroPpal, rol: 'ÁRBITRO'     },
+        { lbl: 'Asistente 1:', val: p.asistente1,  rol: 'ASISTENTE 1' },
+        { lbl: 'Asistente 2:', val: p.asistente2,  rol: 'ASISTENTE 2' },
+        { lbl: 'Emergente:',   val: p.emergente,   rol: 'EMERGENTE'   },
+        { lbl: 'Estado:',    val: esc(p.tipopago) },
+    ];
+    // Excluimos al protagonista y entradas sin valor
+    const miembros = todosMiembros.filter(m => m.rol !== p.rol && m.val);
+
+    // Filas izquierdas fijas en orden
+    const filasIzq = [
+        { lbl: 'Lugar:',     val: esc(p.lugar) },
+        { lbl: 'Fecha:',     val: esc(p.fecha) },
+        { lbl: 'Torneo:',    val: esc(p.torneo) },
+        { lbl: 'Categoría:', val: esc(p.categoria) },
+    ];
+
+    // Emparejar cada fila izquierda con el miembro disponible (sin huecos)
+    let filasHTML = '';
+    for (let i = 0; i < filasIzq.length; i++) {
+        const izq = filasIzq[i];
+        const der = miembros[i];
+        const colDer = der
+            ? `<div class="col-der"><div class="lbl">${der.lbl}</div><div class="val">${esc(der.val)}</div></div>`
+            : '';
+        const sinBorde = der ? '' : ' style="border-right:none;"';
+        filasHTML += `<div class="fila">
+            <div class="col-izq"${sinBorde}><div class="lbl">${izq.lbl}</div><div class="val">${izq.val}</div></div>
+            ${colDer}
+        </div>`;
+    }
+
     return `<div class="cuadro">
         <div class="fila fila-equipos"><div class="lbl">Equipos:</div><div class="val">${esc(p.equipos)}</div></div>
         <div class="fila">
             <div class="col-izq"><div class="lbl">Hora:</div><div class="val">${esc(p.hora)}</div></div>
             <div class="col-der"><div class="lbl">Designado:</div><div class="val negrita">${esc(p.rol)}</div><div class="lbl">Tarifa:</div><div class="val negrita">${fmt(p.tarifa)}</div></div>
         </div>
+        ${filasHTML}
         <div class="fila">
-            <div class="col-izq"><div class="lbl">Lugar:</div><div class="val">${esc(p.lugar)}</div></div>
-            <div class="col-der"><div class="lbl">Árbitro:</div><div class="val">${esc(p.arbitroPpal)}</div></div>
-        </div>
-        <div class="fila">
-            <div class="col-izq"><div class="lbl">Fecha:</div><div class="val">${esc(p.fecha)}</div></div>
-            <div class="col-der"><div class="lbl">Asistente 1:</div><div class="val">${esc(p.asistente1)}</div></div>
-        </div>
-        <div class="fila">
-            <div class="col-izq"><div class="lbl">Torneo:</div><div class="val">${esc(p.torneo)}</div></div>
-            <div class="col-der"><div class="lbl">Emergente:</div><div class="val">${esc(p.emergente)}</div></div>
-        </div>
-        <div class="fila">
-            <div class="col-izq"><div class="lbl">Categoría:</div><div class="val">${esc(p.categoria)}</div></div>
-            <div class="col-der"><div class="lbl">Estado:</div><div class="val">${esc(p.tipopago)}</div></div>
-        </div>
-        <div class="fila">
-            <div class="col-izq"><div class="lbl" style="font-size:12px;">Observaciones:</div><div class="val" style="font-size:10px;">${esc(p.observaciones)}</div></div>
+            <div class="col-izq" style="border-right:none;"><div class="lbl" style="font-size:12px;">Observaciones:</div><div class="val" style="font-size:10px;">${esc(p.observaciones)}</div></div>
         </div>
     </div>`;
 }
-
 function crearEncabezadoHTML(numPag, totalPags) {
     const logo = LOGO_EXISTS ? `<img src="assets/img/logo.png" alt="Logo AAA">` : '';
     return `
     <div class="enc">
         ${logo}
         <div class="enc-texto">
-            <h1 style="font-size:24px;">Académia Antioqueña de Árbitros</h1>
+            <h1 style="font-size:24px;">Academia Antioqueña de Árbitros</h1>
             CONCEPTO: SERVICIO DE ARBITRAJE A LA CORPORACION A.A.A &nbsp; NIT:900302408-2
         </div>
     </div>
@@ -356,9 +377,10 @@ function crearEncabezadoHTML(numPag, totalPags) {
         <span class="arb-datos"><span style="font-size:14px;">Cédula: ${esc(CEDULA_ARB)}</span></span>
         </div>
         <div class="arb-row">
-        <span style="font-size:14px;">CAT: ${esc(CATEGORIA)}</span>
+            <span style="font-size:14px;">Categoría: ${esc(CATEGORIA)}</span>
+            <div style="text-align:left;"><h3>CUENTA DE COBRO: ${esc(CUENTA_NUM)}</h3></div>
+        </div>
     </div>
-    <div class="concepto"><h3>CUENTA DE COBRO: ${esc(CUENTA_NUM)}</h3></div>
     `;
 }
 
@@ -367,7 +389,7 @@ function crearFooterHTML(acumulado, esFinal) {
     const monto  = esFinal ? TOTAL_PAGAR : acumulado;
     const continua = !esFinal ? ' &nbsp;·&nbsp; <em style="font-weight:normal;"></em>' : '';
     return `
-    <div class="total-bloque footer-hoja" style="margin-top:2mm;">
+    <div class="total-bloque footer-hoja" style="margin-top:2mm; display: flex; flex-direction: column;">
         <div class="total-fila">
             <div class="tf-firma" style="font-size:15px;">Firma y Cédula de Árbitro</div>
             <div class="tf-total-lbl">${label}</div>
@@ -456,8 +478,7 @@ function renderPaginas(paginas) {
         hoja.innerHTML =
             crearEncabezadoHTML(idx + 1, total) +
             `<div class="hoja-contenido">${grupo.map(crearCuadroHTML).join('')}</div>` +
-            crearFooterHTML(acumulado, esFinal) +
-            `<div style="text-align:right;font-size:10px;margin-top:2mm;">Página ${idx + 1} de ${total}</div>`
+            crearFooterHTML(acumulado, esFinal)
             ;
         contenedor.appendChild(hoja);
     });
