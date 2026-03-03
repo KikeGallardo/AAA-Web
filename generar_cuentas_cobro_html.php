@@ -256,7 +256,7 @@ body { font-family:'Times New Roman',Times,serif; background:#d4d4d4; font-size:
 .total-bloque { border:1px solid #000; margin-top:2mm; page-break-inside:avoid; }
 .total-fila { display:flex; border-bottom:1px solid #000; min-height:5mm; }
 .total-fila:last-child { border-bottom:none; }
-.tf-firma { flex:1; border-right:1px solid #000; padding:1.5mm 3mm; font-weight:bold; font-size:10px; display:flex; align-items:flex-end; justify-content:center; min-height:16mm;}
+.tf-firma { flex:1; border-right:1px solid #000; padding:1.5mm 28mm; font-weight:bold; font-size:10px; display:flex; align-items:flex-end; justify-content:center; min-height:16mm;}
 .tf-total-lbl { width:22mm; border-right:1px solid #000; font-weight:bold; font-size:10px; display:flex; align-items:center; justify-content:center; padding:1mm; flex-shrink:0; }
 .tf-total-val { flex:1; font-size:14px; font-weight:bold; display:flex; align-items:center; justify-content:flex-end; padding:1mm 3mm; }
 .tf-obs { flex:1; border-right:1px solid #000; padding:1mm 3mm; font-size:10px;  vertical-align:top; min-height:16mm;}
@@ -396,7 +396,7 @@ function crearFooterHTML(acumulado, esFinal) {
             <div class="tf-total-val">${fmt(monto)}</div>
         </div>
         <div class="total-fila">
-            <div class="tf-obs" style="font-size:15px;"><strong>Observaciones</strong>${continua}</div>
+            <div class="tf-obs" style="font-size:15px;"><strong>Observaciones</strong></div>
             <div class="tf-aut" style="font-size:15px;">Autorizada</div>
         </div>
     </div>`;
