@@ -34,6 +34,7 @@
     </div>
     <div class="notificaciones-lista">
         <!-- <h2>Notificaciones</h2>
+        
         <ul>
             <?php
             $stmt = $conn->prepare("SELECT idNotificacion, titulo, mensaje FROM notificaciones");
