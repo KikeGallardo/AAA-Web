@@ -250,6 +250,7 @@ async function guardarPartidos() {
     try {
         const response = await fetch("guardar_partidos.php", {
             method: "POST",
+            credentials: "include",
             headers: {
                 "Content-Type": "application/json"
             },
