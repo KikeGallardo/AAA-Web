@@ -187,11 +187,25 @@ try {
 // =============================================
 
 function cargarTodosArbitros(PDO $conn): array {
-    $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(CONCAT(nombre, ' ', apellido))) AS nombreCompleto, UPPER(TRIM(nombre)) AS solo_nombre FROM arbitro");
+    $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(nombre)) AS nombre, UPPER(TRIM(apellido)) AS apellido FROM arbitro");
     $map = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $map[$row['nombreCompleto']] = $row['idArbitro'];
-        $map[$row['solo_nombre']]    = $row['idArbitro'];
+        $id             = $row['idArbitro'];
+        $nombre         = $row['nombre'];
+        $apellido       = $row['apellido'];
+        $primerNombre   = explode(' ', $nombre)[0];
+        $primerApellido = explode(' ', $apellido)[0];
+
+        // Clave 1: nombre completo exacto  → "JUAN CARLOS PEREZ GOMEZ"
+        $map["{$nombre} {$apellido}"] = $id;
+        // Clave 2: primer nombre + primer apellido → "JUAN PEREZ"
+        $map["{$primerNombre} {$primerApellido}"] = $id;
+        // Clave 3: solo primer nombre
+        $map[$primerNombre] = $id;
+        // Clave 4: primer nombre + apellido completo → "JUAN PEREZ GOMEZ"
+        $map["{$primerNombre} {$apellido}"] = $id;
+        // Clave 5: nombre completo + primer apellido → "JUAN CARLOS PEREZ"
+        $map["{$nombre} {$primerApellido}"] = $id;
     }
     return $map;
 }
@@ -263,10 +277,17 @@ function insertarPartidosEnBatch(PDO $conn, array $filas): int {
 function buscarIdEnMap(array $map, ?string $nombre): ?int {
     if (empty($nombre)) return null;
     $key = strtoupper(trim($nombre));
+
+    // 1. Coincidencia exacta
     if (isset($map[$key])) return $map[$key];
-    foreach ($map as $k => $v) {
-        if (str_contains($k, $key) || str_contains($key, $k)) return $v;
+
+    // 2. Primer nombre + primer apellido
+    $tokens = preg_split('/\s+/', $key);
+    if (count($tokens) >= 2) {
+        $clave = $tokens[0] . ' ' . $tokens[1];
+        if (isset($map[$clave])) return $map[$clave];
     }
+
     return null;
 }
 
