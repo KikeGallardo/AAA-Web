@@ -250,6 +250,7 @@ async function guardarPartidos() {
     try {
         const response = await fetch("guardar_partidos.php", {
             method: "POST",
+            credentials: "include",
             headers: {
                 "Content-Type": "application/json"
             },
@@ -275,6 +276,12 @@ async function guardarPartidos() {
         
         if (data.error) {
             console.error("Error del servidor:", data.error);
+            // Si la sesión expiró, redirigir al login
+            if (data.error.includes('Sesión expirada')) {
+                alert('⚠️ Tu sesión ha expirado. Serás redirigido al login.');
+                window.location.href = 'login.php';
+                return;
+            }
             showError(data.error);
             
             if (data.arbitros_faltantes && data.arbitros_faltantes.length > 0) {
