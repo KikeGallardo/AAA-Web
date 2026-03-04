@@ -1,12 +1,12 @@
 <?php
+session_start();
 header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['user_id'])) {
-    // Si no hay sesión, redirigir al login
-    header("Location: login.php");
+    echo json_encode(["success" => false, "error" => "Sesión expirada. Por favor recarga la página e inicia sesión nuevamente."]);
     exit();
 }
 
