@@ -2,13 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// Verificar si el usuario está logueado
-if (!isset($_SESSION['user_id'])) {
-    // Si no hay sesión, redirigir al login
-    header("Location: login.php");
-    exit();
-}
-
 $conexion = getDBConnection();
 
 // Obtener lista de torneos

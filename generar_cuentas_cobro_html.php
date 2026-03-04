@@ -2,12 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// Verificar si el usuario está logueado
-if (!isset($_SESSION['user_id'])) {
-    // Si no hay sesión, redirigir al login
-    header("Location: login.php");
-    exit();
-}
 $req = array_merge($_GET, $_POST);
 
 if (!isset($req['fechaInicio']) || !isset($req['fechaFin']) || !isset($req['arbitro'])) {
