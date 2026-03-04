@@ -2,6 +2,17 @@
 <?php require_once "assets/footer.php"; ?>
 <?php include "basedatos.php";?>
 
+<?php
+session_start();
+// Verificar si el usuario está logueado
+if (!isset($_SESSION['user_id'])) {
+    // Si no hay sesión, redirigir al login
+    header("Location: login.php");
+    exit();
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

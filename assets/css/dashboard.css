@@ -152,6 +152,25 @@
     color: #555;
 }
 
+.logout {
+    margin-top: 20%;
+    position: absolute;
+    border: none;
+    color: white;
+    font-size: 16px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    left: 50%;
+    transform: translateX(-50%)
+}
+
+.logout:hover {
+    background: #d32d2d;
+}
+
+
 /* Responsive */
 @media (max-width: 480px) {
     .notificacion-item {
