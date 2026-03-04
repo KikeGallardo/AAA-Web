@@ -62,11 +62,13 @@ try {
         }
     }
     if (!empty($arbitrosFaltantes)) {
+        $debugClaves = obtenerClavesArbitros($conn);
         echo json_encode([
             "success" => false,
             "error" => "No se puede guardar la programación. Faltan árbitros por registrar.",
             "arbitros_faltantes" => array_values($arbitrosFaltantes),
-            "total_faltantes" => count($arbitrosFaltantes)
+            "total_faltantes" => count($arbitrosFaltantes),
+            "debug_mapa_arbitros" => $debugClaves
         ]);
         exit;
     }
@@ -196,20 +198,35 @@ function cargarTodosArbitros(PDO $conn): array {
         $primerNombre   = explode(' ', $nombre)[0];
         $primerApellido = explode(' ', $apellido)[0];
 
-        // Clave 1: nombre completo exacto  → "JUAN CARLOS PEREZ GOMEZ"
-        $map["{$nombre} {$apellido}"] = $id;
-        // Clave 2: primer nombre + primer apellido → "JUAN PEREZ"
+        $map["{$nombre} {$apellido}"]             = $id;
         $map["{$primerNombre} {$primerApellido}"] = $id;
-        // Clave 3: solo primer nombre
-        $map[$primerNombre] = $id;
-        // Clave 4: primer nombre + apellido completo → "JUAN PEREZ GOMEZ"
-        $map["{$primerNombre} {$apellido}"] = $id;
-        // Clave 5: nombre completo + primer apellido → "JUAN CARLOS PEREZ"
-        $map["{$nombre} {$primerApellido}"] = $id;
+        $map["{$primerNombre} {$apellido}"]       = $id;
+        $map["{$nombre} {$primerApellido}"]       = $id;
     }
     return $map;
 }
 
+function obtenerClavesArbitros(PDO $conn): array {
+    $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(nombre)) AS nombre, UPPER(TRIM(apellido)) AS apellido FROM arbitro");
+    $debug = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $nombre         = $row['nombre'];
+        $apellido       = $row['apellido'];
+        $primerNombre   = explode(' ', $nombre)[0];
+        $primerApellido = explode(' ', $apellido)[0];
+        $debug[$row['idArbitro']] = [
+            "bd_nombre"   => $nombre,
+            "bd_apellido" => $apellido,
+            "claves" => [
+                "{$nombre} {$apellido}",
+                "{$primerNombre} {$primerApellido}",
+                "{$primerNombre} {$apellido}",
+                "{$nombre} {$primerApellido}"
+            ]
+        ];
+    }
+    return $debug;
+}
 function cargarCategorias(PDO $conn): array {
     $stmt = $conn->query("SELECT idCategoriaPagoArbitro, UPPER(TRIM(nombreCategoria)) AS nombre FROM categoriaPagoArbitro");
     $map = [];
