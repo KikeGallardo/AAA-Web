@@ -17,9 +17,14 @@ if (isset($_POST['registrar'])) {
     $telefono = trim($_POST['telefono'] ?? '');
     $categoria = $_POST['categoriaArbitro'] ?? '';
 
-    if ($nombre === '' || $apellido === '' || $cedula === '' || $categoria === '') {
-        $_SESSION['mensaje'] = ['tipo' => 'error', 'texto' => 'Todos los campos obligatorios deben completarse'];
+    if ($nombre === '' || $apellido === '') {
+        $_SESSION['mensaje'] = ['tipo' => 'error', 'texto' => 'El nombre y apellido son obligatorios'];
     } else {
+        $cedula    = $cedula   !== '' ? $cedula   : null;
+        $fechaNac  = $fechaNac !== '' ? $fechaNac : null;
+        $correo    = $correo   !== '' ? $correo   : null;
+        $telefono  = $telefono !== '' ? $telefono : null;
+        $categoria = $categoria !== '' ? $categoria : null;
         $stmt = $conexion->prepare(
             "INSERT INTO arbitro (nombre, apellido, cedula, fechaNacimiento, correo, telefono, categoriaArbitro)
              VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -71,6 +76,12 @@ if (isset($_POST['editar'])) {
     $correo   = trim($_POST['correo'] ?? '');
     $telefono = trim($_POST['telefono'] ?? '');
     $categoria = $_POST['categoriaArbitro'] ?? '';
+
+    $cedula    = $cedula   !== '' ? $cedula   : null;
+    $fechaNac  = $fechaNac !== '' ? $fechaNac : null;
+    $correo    = $correo   !== '' ? $correo   : null;
+    $telefono  = $telefono !== '' ? $telefono : null;
+    $categoria = $categoria !== '' ? $categoria : null;
 
     if ($id > 0 && $nombre !== '' && $apellido !== '') {
         $stmt = $conexion->prepare(
@@ -177,11 +188,11 @@ require_once "assets/footer.php";
     <form method="POST" class="form-arbitro" id="formRegistro">
         <input type="text" name="nombre" placeholder="Nombre" required maxlength="100">
         <input type="text" name="apellido" placeholder="Apellido" required maxlength="100">
-        <input type="text" name="cedula" placeholder="Cédula" required maxlength="20">
-        <input type="date" name="fechaNacimiento" required>
-        <input type="email" name="correo" placeholder="Correo electrónico" maxlength="100">
-        <input type="text" name="telefono" placeholder="Teléfono" required maxlength="15">
-        <select name="categoriaArbitro" required>
+        <input type="text" name="cedula" placeholder="Cédula (opcional)" maxlength="20">
+        <input type="date" name="fechaNacimiento">
+        <input type="email" name="correo" placeholder="Correo electrónico (opcional)" maxlength="100">
+        <input type="text" name="telefono" placeholder="Teléfono (opcional)" maxlength="15">
+        <select name="categoriaArbitro">
             <option value="">Seleccione categoría</option>
             <option value="A">A</option>
             <option value="B">B</option>
@@ -205,7 +216,7 @@ require_once "assets/footer.php";
 <!-- BUSCADOR -->
 <div class="buscar-container">
     <form method="GET">
-        <input type="text" name="buscar" placeholder="Buscar árbitro..." value="<?= h($busqueda) ?>">
+        <input type="text" id="buscador" name="buscar" placeholder="Buscar árbitro..." value="<?= h($busqueda) ?>">
         <button type="submit">Buscar</button>
     </form>
 </div>
@@ -288,14 +299,14 @@ require_once "assets/footer.php";
                 <input type="text" id="edit_apellido" name="apellido" placeholder="Apellido" required>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                <input type="text" id="edit_cedula" name="cedula" placeholder="Cédula" required>
-                <input type="date" id="edit_fechaNacimiento" name="fechaNacimiento" required>
+                <input type="text" id="edit_cedula" name="cedula" placeholder="Cédula (opcional)">
+                <input type="date" id="edit_fechaNacimiento" name="fechaNacimiento">
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                <input type="email" id="edit_correo" name="correo" placeholder="Correo">
-                <input type="text" id="edit_telefono" name="telefono" placeholder="Teléfono" required>
+                <input type="email" id="edit_correo" name="correo" placeholder="Correo (opcional)">
+                <input type="text" id="edit_telefono" name="telefono" placeholder="Teléfono (opcional)">
             </div>
-            <select id="edit_categoria" name="categoriaArbitro" required style="width:100%; margin-bottom:1rem;">
+            <select id="edit_categoria" name="categoriaArbitro" style="width:100%; margin-bottom:1rem;">
                 <option value="">Seleccione categoría</option>
                 <option value="A">A</option>
                 <option value="B">B</option>
@@ -343,6 +354,7 @@ require_once "assets/footer.php";
     to { transform: translateX(400px); opacity: 0; }
 }
 </style>
+
 
 <script>
 // ========== GESTIÓN DE MODALES ==========
@@ -418,13 +430,13 @@ document.getElementById('formRegistro').addEventListener('submit', function(e) {
         return;
     }
 
-    if (!/^[0-9A-Za-z\-]+$/.test(cedula)) {
+    if (cedula !== '' && !/^[0-9A-Za-z\-]+$/.test(cedula)) {
         e.preventDefault();
         showToast('La cédula contiene caracteres inválidos', 'error');
         return;
     }
 
-    if (!/^[0-9]{6,15}$/.test(telefono)) {
+    if (telefono !== '' && !/^[0-9]{6,15}$/.test(telefono)) {
         e.preventDefault();
         showToast('El teléfono debe contener solo números (6-15 dígitos)', 'error');
         return;
@@ -447,7 +459,6 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 </script>
-
 </body>
 </html>
 <?php
