@@ -265,13 +265,21 @@ switch ($accion) {
       $sql = "
           SELECT 
               p.idPartido, p.fecha, p.hora, p.canchaLugar, p.categoriaText,
+              p.idEquipo1, p.idEquipo2,
+              p.idCategoriaPagoArbitro,
+              p.idArbitro1, p.idArbitro2, p.idArbitro3, p.idArbitro4,
               e1.nombreEquipo AS equipoLocal,
               e2.nombreEquipo AS equipoVisitante,
               cp.nombreCategoria AS categoriaPago,
-              a1.nombre AS arbitroPrincipal, cp.pagoArbitro1 AS pagoPrincipal,
-              a2.nombre AS arbitroAsistente1, cp.pagoArbitro2 AS pagoAsistente1,
-              a3.nombre AS arbitroAsistente2, cp.pagoArbitro3 AS pagoAsistente2,
-              a4.nombre AS arbitroCuarto,    cp.pagoArbitro4 AS pagoCuarto
+              a1.nombre AS arbitroPrincipal, a1.apellido AS apellidoArbitro1,
+              cp.pagoArbitro1 AS pagoPrincipal,
+              a2.nombre AS arbitroAsistente1, a2.apellido AS apellidoArbitro2,
+              cp.pagoArbitro2 AS pagoAsistente1,
+              a3.nombre AS arbitroAsistente2, a3.apellido AS apellidoArbitro3,
+              cp.pagoArbitro3 AS pagoAsistente2,
+              a4.nombre AS arbitroCuarto, a4.apellido AS apellidoArbitro4,
+              cp.pagoArbitro4 AS pagoCuarto,
+              p.observaciones
           FROM partido p
           INNER JOIN equipo e1 ON p.idEquipo1 = e1.idEquipo
           INNER JOIN equipo e2 ON p.idEquipo2 = e2.idEquipo
@@ -315,6 +323,29 @@ switch ($accion) {
     $stmt->close();
     break;
 
+    case 'listar_equipos':
+    $res = $conn->query('SELECT idEquipo, nombreEquipo FROM equipo ORDER BY nombreEquipo ASC');
+    $lista = [];
+    while ($row = $res->fetch_assoc()) $lista[] = $row;
+    echo json_encode($lista);
+    break;
+
+    case 'listar_categorias_pago':
+    // Devuelve todas las categorías de pago, opcionalmente filtradas por torneo
+    $idTorneo = !empty($_POST['idTorneo']) ? (int)$_POST['idTorneo'] : 0;
+    if ($idTorneo > 0) {
+        $stmtC = $conn->prepare('SELECT idCategoriaPagoArbitro, nombreCategoria FROM categoriaPagoArbitro WHERE idTorneo = ? ORDER BY nombreCategoria');
+        $stmtC->bind_param('i', $idTorneo);
+    } else {
+        $stmtC = $conn->prepare('SELECT idCategoriaPagoArbitro, nombreCategoria, idTorneo FROM categoriaPagoArbitro ORDER BY nombreCategoria');
+    }
+    $stmtC->execute();
+    $resC = $stmtC->get_result();
+    $listaC = [];
+    while ($row = $resC->fetch_assoc()) $listaC[] = $row;
+    echo json_encode($listaC);
+    break;
+
     case 'listar_arbitros':
     $res = $conn->query('SELECT idArbitro, CONCAT(nombre, " ", apellido) AS nombreCompleto FROM arbitro ORDER BY nombre, apellido');
     $lista = [];
@@ -323,22 +354,119 @@ switch ($accion) {
     break;
 
     case 'actualizar_partido':
-    $idPartido     = isset($_POST['idPartido'])     ? (int)$_POST['idPartido']     : 0;
-    $hora          = $_POST['hora']          ?? '';
-    $canchaLugar   = trim($_POST['canchaLugar']   ?? '');
-    $categoriaText = trim($_POST['categoriaText'] ?? '');
-    $idEquipo1     = isset($_POST['idEquipo1'])     ? (int)$_POST['idEquipo1']     : null;
-    $idEquipo2     = isset($_POST['idEquipo2'])     ? (int)$_POST['idEquipo2']     : null;
-    $idArbitro1    = !empty($_POST['idArbitro1'])   ? (int)$_POST['idArbitro1']    : null;
-    $idArbitro2    = !empty($_POST['idArbitro2'])   ? (int)$_POST['idArbitro2']    : null;
-    $idArbitro3    = !empty($_POST['idArbitro3'])   ? (int)$_POST['idArbitro3']    : null;
-    $idArbitro4    = !empty($_POST['idArbitro4'])   ? (int)$_POST['idArbitro4']    : null;
-    if ($idPartido <= 0) { echo json_encode(['status'=>'error','msg'=>'ID inválido']); exit; }
-    $stmt = $conn->prepare('UPDATE partido SET hora=?, canchaLugar=?, categoriaText=?, idArbitro1=?, idArbitro2=?, idArbitro3=?, idArbitro4=? WHERE idPartido=?');
-    $stmt->bind_param('sssiiiis', $hora, $canchaLugar, $categoriaText, $idArbitro1, $idArbitro2, $idArbitro3, $idArbitro4, $idPartido);
+    $idPartido       = isset($_POST['idPartido'])       ? (int)$_POST['idPartido']       : 0;
+    $hora            = trim($_POST['hora']              ?? '');
+    $fecha           = trim($_POST['fecha']             ?? '');
+    $canchaLugar     = trim($_POST['canchaLugar']       ?? '');
+    $categoriaText   = trim($_POST['categoriaText']     ?? '');
+    $idEquipo1       = !empty($_POST['idEquipo1'])       ? (int)$_POST['idEquipo1']       : null;
+    $idEquipo2       = !empty($_POST['idEquipo2'])       ? (int)$_POST['idEquipo2']       : null;
+    $idCategoriaPago = !empty($_POST['idCategoriaPago']) ? (int)$_POST['idCategoriaPago'] : null;
+    $idArbitro1      = !empty($_POST['idArbitro1'])      ? (int)$_POST['idArbitro1']      : null;
+    $idArbitro2      = !empty($_POST['idArbitro2'])      ? (int)$_POST['idArbitro2']      : null;
+    $idArbitro3      = !empty($_POST['idArbitro3'])      ? (int)$_POST['idArbitro3']      : null;
+    $idArbitro4      = !empty($_POST['idArbitro4'])      ? (int)$_POST['idArbitro4']      : null;
+    $forzar          = !empty($_POST['forzar']);   // el JS reenvía con forzar=1 si el usuario confirma
+
+    // ── Validaciones básicas ──────────────────────────────
+    if ($idPartido <= 0)
+        { echo json_encode(['status'=>'error','msg'=>'ID de partido inválido']); exit; }
+    if (!$fecha || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha))
+        { echo json_encode(['status'=>'error','msg'=>'Fecha inválida']); exit; }
+    if (!$hora  || !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $hora))
+        { echo json_encode(['status'=>'error','msg'=>'Hora inválida']); exit; }
+    if (!$idEquipo1 || !$idEquipo2)
+        { echo json_encode(['status'=>'error','msg'=>'Debes seleccionar ambos equipos']); exit; }
+    if ($idEquipo1 === $idEquipo2)
+        { echo json_encode(['status'=>'error','msg'=>'El equipo local y visitante no pueden ser el mismo']); exit; }
+
+    // ── Hora razonable (06:00 – 23:00) ───────────────────
+    $horaH = (int)explode(':', $hora)[0];
+    if ($horaH < 6 || $horaH >= 23)
+        { echo json_encode(['status'=>'error','msg'=>"Hora fuera de rango permitido (06:00 – 23:00)"]); exit; }
+
+    // ── Árbitros duplicados ───────────────────────────────
+    $arbitros = array_filter([$idArbitro1,$idArbitro2,$idArbitro3,$idArbitro4]);
+    if (count($arbitros) !== count(array_unique($arbitros)))
+        { echo json_encode(['status'=>'error','msg'=>'El mismo árbitro está asignado a más de un puesto']); exit; }
+
+    // ── Conflicto de horario (±30 min) ───────────────────
+    if (!$forzar && !empty($arbitros)) {
+        $placeholders = implode(',', array_fill(0, count($arbitros), '?'));
+        $arbIds       = array_values($arbitros);
+        $types        = str_repeat('i', count($arbIds));
+
+        // Buscar partidos en la misma fecha cuya hora esté a menos de 30 min,
+        // excluyendo el partido que se está editando
+        $sqlConflicto = "
+            SELECT a.nombre, a.apellido,
+                   p.hora AS horaConflicto, p.idPartido
+            FROM partido p
+            INNER JOIN arbitro a ON a.idArbitro IN ($placeholders)
+              AND (p.idArbitro1 = a.idArbitro OR p.idArbitro2 = a.idArbitro
+                OR p.idArbitro3 = a.idArbitro OR p.idArbitro4 = a.idArbitro)
+            WHERE p.fecha = ?
+              AND p.idPartido != ?
+              AND ABS(TIMESTAMPDIFF(MINUTE,
+                    CONCAT(p.fecha,' ',p.hora),
+                    CONCAT(?,        ' ',?))) <= 30
+        ";
+
+        $stmtC = $conn->prepare($sqlConflicto);
+        $bindTypes = $types . 'siss';
+        $bindVals  = array_merge($arbIds, [$fecha, $idPartido, $fecha, $hora]);
+        $stmtC->bind_param($bindTypes, ...$bindVals);
+        $stmtC->execute();
+        $resC = $stmtC->get_result();
+
+        $conflictos = [];
+        while ($row = $resC->fetch_assoc()) {
+            $conflictos[] = $row['nombre'].' '.$row['apellido'].
+                            ' (partido a las '.substr($row['horaConflicto'],0,5).')';
+        }
+        $stmtC->close();
+
+        if (!empty($conflictos)) {
+            echo json_encode([
+                'status'     => 'conflict',
+                'conflictos' => array_unique($conflictos),
+                'msg'        => 'Conflicto de horario detectado'
+            ]);
+            exit;
+        }
+    }
+
+    // ── Ejecutar UPDATE ───────────────────────────────────
+    $stmt = $conn->prepare(
+        'UPDATE partido
+         SET fecha=?, hora=?, canchaLugar=?, categoriaText=?,
+             idEquipo1=?, idEquipo2=?, idCategoriaPagoArbitro=?,
+             idArbitro1=?, idArbitro2=?, idArbitro3=?, idArbitro4=?
+         WHERE idPartido=?'
+    );
+    $stmt->bind_param('ssssiiiiiiii',
+        $fecha, $hora, $canchaLugar, $categoriaText,
+        $idEquipo1, $idEquipo2, $idCategoriaPago,
+        $idArbitro1, $idArbitro2, $idArbitro3, $idArbitro4,
+        $idPartido
+    );
     if ($stmt->execute()) {
-        // Devolver los nombres actualizados para refrescar la tabla
-        $r = $conn->query("SELECT CONCAT(a1.nombre,' ',a1.apellido) n1, CONCAT(a2.nombre,' ',a2.apellido) n2, CONCAT(a3.nombre,' ',a3.apellido) n3, CONCAT(a4.nombre,' ',a4.apellido) n4 FROM partido p LEFT JOIN arbitro a1 ON p.idArbitro1=a1.idArbitro LEFT JOIN arbitro a2 ON p.idArbitro2=a2.idArbitro LEFT JOIN arbitro a3 ON p.idArbitro3=a3.idArbitro LEFT JOIN arbitro a4 ON p.idArbitro4=a4.idArbitro WHERE p.idPartido=$idPartido");
+        $r = $conn->query("
+            SELECT
+                e1.nombreEquipo eq1, e2.nombreEquipo eq2,
+                CONCAT(COALESCE(a1.nombre,''),' ',COALESCE(a1.apellido,'')) n1,
+                CONCAT(COALESCE(a2.nombre,''),' ',COALESCE(a2.apellido,'')) n2,
+                CONCAT(COALESCE(a3.nombre,''),' ',COALESCE(a3.apellido,'')) n3,
+                CONCAT(COALESCE(a4.nombre,''),' ',COALESCE(a4.apellido,'')) n4
+            FROM partido p
+            LEFT JOIN equipo  e1 ON p.idEquipo1  = e1.idEquipo
+            LEFT JOIN equipo  e2 ON p.idEquipo2  = e2.idEquipo
+            LEFT JOIN arbitro a1 ON p.idArbitro1 = a1.idArbitro
+            LEFT JOIN arbitro a2 ON p.idArbitro2 = a2.idArbitro
+            LEFT JOIN arbitro a3 ON p.idArbitro3 = a3.idArbitro
+            LEFT JOIN arbitro a4 ON p.idArbitro4 = a4.idArbitro
+            WHERE p.idPartido = $idPartido
+        ");
         $nombres = $r ? $r->fetch_assoc() : [];
         echo json_encode(['status'=>'ok', 'nombres'=>$nombres]);
     } else {
@@ -533,46 +661,5 @@ switch ($accion) {
         }
         $stmt->close();
         break;
-
-    // ── CATEGORÍAS DE ÁRBITROS ───────────────────────────────────
-    case 'agregar_categoria_arbitro':
-        $nombre = strtoupper(trim($_POST['nombre'] ?? ''));
-        if ($nombre === '') {
-            echo json_encode(['status' => 'error', 'msg' => 'El nombre no puede estar vacío']);
-            exit;
-        }
-        $stmt = $conn->prepare("INSERT INTO categoriaArbitro (nombre) VALUES (?)");
-        $stmt->bind_param('s', $nombre);
-        if ($stmt->execute()) {
-            $cats = [];
-            $res = $conn->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
-            while ($r = $res->fetch_assoc()) $cats[] = $r['nombre'];
-            echo json_encode(['status' => 'ok', 'categorias' => $cats]);
-        } else {
-            $msg = $conn->errno === 1062 ? 'Esa categoría ya existe.' : 'Error al agregar.';
-            echo json_encode(['status' => 'error', 'msg' => $msg]);
-        }
-        $stmt->close();
-        break;
-
-    case 'eliminar_categoria_arbitro':
-        $nombre = trim($_POST['nombre'] ?? '');
-        if ($nombre === '') {
-            echo json_encode(['status' => 'error', 'msg' => 'Nombre inválido']);
-            exit;
-        }
-        $stmt = $conn->prepare("DELETE FROM categoriaArbitro WHERE nombre = ?");
-        $stmt->bind_param('s', $nombre);
-        if ($stmt->execute()) {
-            $cats = [];
-            $res = $conn->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
-            while ($r = $res->fetch_assoc()) $cats[] = $r['nombre'];
-            echo json_encode(['status' => 'ok', 'categorias' => $cats]);
-        } else {
-            echo json_encode(['status' => 'error', 'msg' => 'Error al eliminar.']);
-        }
-        $stmt->close();
-        break;
-
     }
 ?>
