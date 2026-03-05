@@ -355,7 +355,6 @@ require_once "assets/footer.php";
 }
 </style>
 
-
 <script>
 // ========== GESTIÓN DE MODALES ==========
 function openModal(modalId) {
@@ -459,6 +458,8 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 </script>
+
+<script src="assets/js/arbitros.js"></script>
 </body>
 </html>
 <?php
