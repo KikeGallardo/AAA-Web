@@ -146,6 +146,15 @@ if ($where) {
 
 $stmt->execute();
 $arbitros = $stmt->get_result();
+
+// ------------------------------------
+// 5) CARGAR CATEGORÍAS DESDE BD
+// ------------------------------------
+$resCats = $conexion->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
+$categoriasDB = [];
+while ($cat = $resCats->fetch_assoc()) {
+    $categoriasDB[] = $cat['nombre'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -194,20 +203,9 @@ require_once "assets/footer.php";
         <input type="text" name="telefono" placeholder="Teléfono (opcional)" maxlength="15">
         <select name="categoriaArbitro">
             <option value="">Seleccione categoría</option>
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
-            <option value="ASPIRANTE">ASPIRANTE</option>
-            <option value="DEPARTAMENTAL A">DEPARTAMENTAL A</option>
-            <option value="DEPARTAMENTAL B">DEPARTAMENTAL B</option>
-            <option value="EXPROFESIONAL">EXPROFESIONAL</option>
-            <option value="FEMENINA">FEMENINA</option>
-            <option value="FEMENINO PROFESIONAL">FEMENINO PROFESIONAL</option>
-            <option value="FUTBOL PLAYA">FUTBOL PLAYA</option>
-            <option value="FUTSAL DEPARTAMENTAL">FUTSAL DEPARTAMENTAL</option>
-            <option value="FUTSAL PROFESIONAL">FUTSAL PROFESIONAL</option>
-            <option value="MASTER">MASTER</option>
+            <?php foreach ($categoriasDB as $cat): ?>
+            <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
+            <?php endforeach; ?>
         </select>
         <button type="submit" name="registrar" class="btn-registrar">Registrar Árbitro</button>
     </form>
@@ -308,20 +306,9 @@ require_once "assets/footer.php";
             </div>
             <select id="edit_categoria" name="categoriaArbitro" style="width:100%; margin-bottom:1rem;">
                 <option value="">Seleccione categoría</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-                <option value="ASPIRANTE">ASPIRANTE</option>
-                <option value="DEPARTAMENTAL A">DEPARTAMENTAL A</option>
-                <option value="DEPARTAMENTAL B">DEPARTAMENTAL B</option>
-                <option value="EXPROFESIONAL">EXPROFESIONAL</option>
-                <option value="FEMENINA">FEMENINA</option>
-                <option value="FEMENINO PROFESIONAL">FEMENINO PROFESIONAL</option>
-                <option value="FUTBOL PLAYA">FUTBOL PLAYA</option>
-                <option value="FUTSAL DEPARTAMENTAL">FUTSAL DEPARTAMENTAL</option>
-                <option value="FUTSAL PROFESIONAL">FUTSAL PROFESIONAL</option>
-                <option value="MASTER">MASTER</option>
+                <?php foreach ($categoriasDB as $cat): ?>
+                <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
+                <?php endforeach; ?>
             </select>
             <div style="display:flex; gap:10px;">
                 <button type="submit" name="editar" class="btn-registrar">Guardar Cambios</button>
@@ -457,6 +444,177 @@ function showToast(message, type = 'success') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+</script>
+
+
+<!-- ========== BOTÓN FLOTANTE CATEGORÍAS ========== -->
+<button class="btn-flotante-cats" onclick="openModal('modalCategorias')" title="Gestionar categorías de árbitros">
+    <i class="material-icons">label</i>
+</button>
+
+<!-- ========== MODAL GESTIÓN DE CATEGORÍAS ========== -->
+<div id="modalCategorias" class="modal">
+    <div class="modal-content" style="max-width:480px;">
+        <button class="close-btn" onclick="closeModal('modalCategorias')">✕</button>
+        <h3>Categorías de Árbitros</h3>
+
+        <!-- Lista de categorías actuales -->
+        <div id="listaCategorias" style="margin-bottom:1.5rem; max-height:320px; overflow-y:auto;">
+            <?php foreach ($categoriasDB as $cat): ?>
+            <div class="cat-item" id="cat-<?= h($cat) ?>">
+                <span class="cat-nombre"><?= h($cat) ?></span>
+                <button type="button" class="btn-eliminar-cat"
+                        onclick="eliminarCategoria('<?= h(addslashes($cat)) ?>')"
+                        title="Eliminar">
+                    <i class="material-icons">delete</i>
+                </button>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Formulario agregar -->
+        <div style="display:flex; gap:0.5rem;">
+            <input type="text" id="nuevaCategoria" placeholder="Nueva categoría..." maxlength="100"
+                   style="flex:1; padding:0.75rem; border:1px solid #d1d5db; border-radius:6px; font-size:1rem; text-transform:uppercase;">
+            <button type="button" class="btn-registrar" onclick="agregarCategoria()">
+                <i class="material-icons" style="vertical-align:middle;">add</i> Agregar
+            </button>
+        </div>
+        <p id="msgCategoria" style="margin-top:0.75rem; font-size:0.85rem; min-height:1.2rem;"></p>
+    </div>
+</div>
+
+<style>
+/* ── Botón flotante ── */
+.btn-flotante-cats {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 900;
+    transition: background 0.2s, transform 0.2s;
+}
+.btn-flotante-cats:hover {
+    background: #1e40af;
+    transform: scale(1.1);
+}
+.btn-flotante-cats .material-icons { font-size: 1.6rem; }
+
+/* ── Lista de categorías en modal ── */
+.cat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.4rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    transition: background 0.15s;
+}
+.cat-item:hover { background: #f3f4f6; }
+.cat-nombre { font-weight: 500; font-size: 0.95rem; }
+.btn-eliminar-cat {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    padding: 0.2rem;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+.btn-eliminar-cat:hover { background: #fee2e2; }
+.btn-eliminar-cat .material-icons { font-size: 1.1rem; }
+</style>
+
+<script>
+// ========== GESTIÓN DE CATEGORÍAS (AJAX) ==========
+
+function mostrarMsgCat(texto, tipo) {
+    const el = document.getElementById('msgCategoria');
+    el.textContent = texto;
+    el.style.color = tipo === 'error' ? '#ef4444' : '#10b981';
+    setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function recargarSelects(categorias) {
+    const opcionesHTML = '<option value="">Seleccione categoría</option>'
+        + categorias.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    document.querySelector('select[name="categoriaArbitro"]').innerHTML = opcionesHTML;
+    document.getElementById('edit_categoria').innerHTML = opcionesHTML;
+}
+
+async function agregarCategoria() {
+    const input = document.getElementById('nuevaCategoria');
+    const nombre = input.value.trim().toUpperCase();
+    if (!nombre) { mostrarMsgCat('Escribe un nombre para la categoría.', 'error'); return; }
+
+    const fd = new FormData();
+    fd.append('accion', 'agregar_categoria_arbitro');
+    fd.append('nombre', nombre);
+
+    const res  = await fetch('consultas.php', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+        // Agregar al DOM sin recargar
+        const lista = document.getElementById('listaCategorias');
+        const div = document.createElement('div');
+        div.className = 'cat-item';
+        div.id = 'cat-' + nombre;
+        div.innerHTML = `
+            <span class="cat-nombre">${escapeHtml(nombre)}</span>
+            <button type="button" class="btn-eliminar-cat"
+                    onclick="eliminarCategoria('${nombre.replace(/'/g, "\'")}')"
+                    title="Eliminar">
+                <i class="material-icons">delete</i>
+            </button>`;
+        lista.appendChild(div);
+        recargarSelects(data.categorias);
+        input.value = '';
+        mostrarMsgCat('Categoría agregada correctamente.', 'ok');
+    } else {
+        mostrarMsgCat(data.msg || 'Error al agregar.', 'error');
+    }
+}
+
+async function eliminarCategoria(nombre) {
+    if (!confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
+
+    const fd = new FormData();
+    fd.append('accion', 'eliminar_categoria_arbitro');
+    fd.append('nombre', nombre);
+
+    const res  = await fetch('consultas.php', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+        const el = document.getElementById('cat-' + nombre);
+        if (el) el.remove();
+        recargarSelects(data.categorias);
+        mostrarMsgCat('Categoría eliminada.', 'ok');
+    } else {
+        mostrarMsgCat(data.msg || 'Error al eliminar.', 'error');
+    }
+}
+
+// forzar mayúsculas en el input
+document.addEventListener('DOMContentLoaded', function() {
+    const inp = document.getElementById('nuevaCategoria');
+    if (inp) inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase(); });
+});
 </script>
 
 <script src="assets/js/arbitros.js"></script>

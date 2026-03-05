@@ -533,5 +533,46 @@ switch ($accion) {
         }
         $stmt->close();
         break;
+
+    // ── CATEGORÍAS DE ÁRBITROS ───────────────────────────────────
+    case 'agregar_categoria_arbitro':
+        $nombre = strtoupper(trim($_POST['nombre'] ?? ''));
+        if ($nombre === '') {
+            echo json_encode(['status' => 'error', 'msg' => 'El nombre no puede estar vacío']);
+            exit;
+        }
+        $stmt = $conn->prepare("INSERT INTO categoriaArbitro (nombre) VALUES (?)");
+        $stmt->bind_param('s', $nombre);
+        if ($stmt->execute()) {
+            $cats = [];
+            $res = $conn->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
+            while ($r = $res->fetch_assoc()) $cats[] = $r['nombre'];
+            echo json_encode(['status' => 'ok', 'categorias' => $cats]);
+        } else {
+            $msg = $conn->errno === 1062 ? 'Esa categoría ya existe.' : 'Error al agregar.';
+            echo json_encode(['status' => 'error', 'msg' => $msg]);
+        }
+        $stmt->close();
+        break;
+
+    case 'eliminar_categoria_arbitro':
+        $nombre = trim($_POST['nombre'] ?? '');
+        if ($nombre === '') {
+            echo json_encode(['status' => 'error', 'msg' => 'Nombre inválido']);
+            exit;
+        }
+        $stmt = $conn->prepare("DELETE FROM categoriaArbitro WHERE nombre = ?");
+        $stmt->bind_param('s', $nombre);
+        if ($stmt->execute()) {
+            $cats = [];
+            $res = $conn->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
+            while ($r = $res->fetch_assoc()) $cats[] = $r['nombre'];
+            echo json_encode(['status' => 'ok', 'categorias' => $cats]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => 'Error al eliminar.']);
+        }
+        $stmt->close();
+        break;
+
     }
 ?>

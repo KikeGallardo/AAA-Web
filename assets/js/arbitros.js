@@ -8,7 +8,7 @@ function editarArbitro(id, nombre, apellido, cedula, fecha, correo, telefono, ca
     document.getElementById("edit_correo").value = correo;
     document.getElementById("edit_telefono").value = telefono;
     document.getElementById("edit_categoria").value = categoria;
-    document.getElementById("modalEditar").style.display = "flex";
+    openModal("modalEditar");
 }
 
 // Todo lo que toca el DOM espera a que la página esté lista
