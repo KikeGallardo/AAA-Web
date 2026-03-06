@@ -322,7 +322,7 @@ function crearCuadroHTML(p) {
         { lbl: 'Asistente 1:', val: p.asistente1,  rol: 'ASISTENTE 1' },
         { lbl: 'Asistente 2:', val: p.asistente2,  rol: 'ASISTENTE 2' },
         { lbl: 'Emergente:',   val: p.emergente,   rol: 'EMERGENTE'   },
-        { lbl: 'Estado:',    val: esc(p.tipopago) },
+        { lbl: 'Estado de pago:',    val: esc(p.tipopago) },
     ];
     // Excluimos al protagonista y entradas sin valor
     const miembros = todosMiembros.filter(m => m.rol !== p.rol && m.val);

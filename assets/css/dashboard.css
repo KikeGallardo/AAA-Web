@@ -102,3 +102,51 @@
         height: 3rem;
     }
 }
+
+.changelog-section {
+    margin: 2rem auto;
+    max-width: 900px;
+    padding: 0 1rem;
+}
+.changelog-titulo {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+    opacity: 0.7;
+}
+.changelog-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+.changelog-table thead tr {
+    border-bottom: 2px solid currentColor;
+    opacity: 0.5;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+}
+.changelog-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+}
+.changelog-table td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(128,128,128,0.2);
+}
+.changelog-table td:first-child {
+    font-weight: 600;
+    white-space: nowrap;
+    width: 25%;
+}
+.changelog-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.changelog-empty {
+    opacity: 0.5;
+    font-style: italic;
+    text-align: center;
+}
