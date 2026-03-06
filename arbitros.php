@@ -105,7 +105,7 @@ if (isset($_POST['editar'])) {
 // ------------------------------------
 // 4) PAGINACIÓN + BÚSQUEDA
 // ------------------------------------
-$registrosPorPagina = 5;
+$registrosPorPagina = 10;
 $pagina = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
 $offset = ($pagina - 1) * $registrosPorPagina;
 
@@ -133,7 +133,7 @@ $totalPaginas = max(1, ceil($totalRegistros / $registrosPorPagina));
 $totalQuery->close();
 
 // Listado de árbitros
-$sql = "SELECT * FROM arbitro $where ORDER BY idArbitro DESC LIMIT ? OFFSET ?";
+$sql = "SELECT * FROM arbitro $where ORDER BY nombre ASC, apellido ASC LIMIT ? OFFSET ?";
 $stmt = $conexion->prepare($sql);
 
 if ($where) {
