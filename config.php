@@ -27,7 +27,7 @@ function getDBConnection() {
         die("Error de conexión a la base de datos. Contacte al administrador.");
     }
     
-    $conexion->set_charset("utf8mb4");
+    // $conexion->set_charset("utf8mb4");
     return $conexion;
 }
 

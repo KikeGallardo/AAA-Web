@@ -537,7 +537,7 @@ switch ($accion) {
         WHERE p.fecha BETWEEN ? AND ?
         $whereTorneo
         GROUP BY a.idArbitro, a.nombre, a.apellido, a.cedula
-        ORDER BY a.apellido, a.nombre
+        ORDER BY a.nombre, a.apellido 
     ";
 
     $types  = 'ss' . $extraTypes;
