@@ -368,6 +368,7 @@ function crearEncabezadoHTML(numPag, totalPags) {
     <div class="enc">
         ${logo}
         <div class="enc-texto">
+            <div style="text-align:right;font-size:10px;margin-top:2mm;">Página ${numPag} de ${totalPags}</div>
             <h1 style="font-size:24px;">Academia Antioqueña de Árbitros</h1>
             CONCEPTO: SERVICIO DE ARBITRAJE A LA CORPORACION A.A.A &nbsp; NIT:900302408-2
         </div>
