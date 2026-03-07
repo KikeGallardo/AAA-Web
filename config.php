@@ -1,4 +1,6 @@
 <?php
+require_once 'error_handler.php';
+
 // config.php - Mantén este archivo FUERA del directorio público
 // o protégelo con .htaccess
 
