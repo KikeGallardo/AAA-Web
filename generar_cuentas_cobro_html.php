@@ -385,9 +385,9 @@ function crearEncabezadoHTML(numPag, totalPags) {
     `;
 }
 
-function crearFooterHTML(acumulado, esFinal) {
+function crearFooterHTML(totalPagina, esFinal) {
     const label  = esFinal ? 'TOTAL' : 'SUBTOTAL';
-    const monto  = esFinal ? TOTAL_PAGAR : acumulado;
+    const monto  = totalPagina;
     const continua = !esFinal ? ' &nbsp;·&nbsp; <em style="font-weight:normal;"></em>' : '';
     return `
     <div class="total-bloque footer-hoja" style="margin-top:2mm; display: flex; flex-direction: column;">
@@ -466,20 +466,19 @@ function paginar() {
 function renderPaginas(paginas) {
     const contenedor = document.getElementById('contenedor-hojas');
     contenedor.innerHTML = '';
-    let acumulado = 0;
     const total = paginas.length;
 
     paginas.forEach((indices, idx) => {
-        const esFinal = idx === total - 1;
-        const grupo   = indices.map(i => PARTIDOS[i]);
-        acumulado    += grupo.reduce((s, p) => s + Number(p.tarifa), 0);
+        const esFinal      = idx === total - 1;
+        const grupo        = indices.map(i => PARTIDOS[i]);
+        const totalPagina  = grupo.reduce((s, p) => s + Number(p.tarifa), 0);
 
         const hoja = document.createElement('div');
         hoja.className = 'hoja';
         hoja.innerHTML =
             crearEncabezadoHTML(idx + 1, total) +
             `<div class="hoja-contenido">${grupo.map(crearCuadroHTML).join('')}</div>` +
-            crearFooterHTML(acumulado, esFinal)
+            crearFooterHTML(totalPagina, esFinal)
             ;
         contenedor.appendChild(hoja);
     });
