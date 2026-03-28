@@ -5,11 +5,11 @@ require_once 'error_handler.php';
 // o protégelo con .htaccess
 
 // Configuración de base de datos
-define('DB_HOST', 'db-fde-02.apollopanel.com');
-define('DB_PORT', '3306');
-define('DB_USER', 'u136076_tCDay64NMd');
-define('DB_PASS', 'oo2qzuwP!MlmTw02fpV6pJS+');
-define('DB_NAME', 's136076_Aribatraje');
+// define('DB_HOST', 'db-fde-02.apollopanel.com');
+// define('DB_PORT', '3306');
+// define('DB_USER', 'u136076_tCDay64NMd');
+// define('DB_PASS', 'oo2qzuwP!MlmTw02fpV6pJS+');
+// define('DB_NAME', 's136076_Aribatraje');
 
 // Configuración de sesión
 define('SESSION_TIMEOUT', 3600); // 1 hora
