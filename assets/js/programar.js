@@ -89,7 +89,6 @@ function handleFile(file) {
             let headerRowIndex = -1;
             for (let i = 0; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                // Buscar por varias columnas comunes
                 if (row.some(cell => {
                     const cellStr = cell ? cell.toString().toUpperCase() : '';
                     return cellStr.includes('CATEGORIA') || 
@@ -229,7 +228,6 @@ async function guardarPartidos() {
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
     
-    // Preparar datos para enviar
     const torneoSelect = document.getElementById('torneoSelect');
     const idTorneo = torneoSelect.value;
     const nombreTorneo = torneoSelect.options[torneoSelect.selectedIndex].dataset.nombre;
@@ -276,14 +274,21 @@ async function guardarPartidos() {
         
         if (data.error) {
             console.error("Error del servidor:", data.error);
-            // Si la sesión expiró, redirigir al login
+
             if (data.error.includes('Sesión expirada')) {
                 alert('⚠️ Tu sesión ha expirado. Serás redirigido al login.');
                 window.location.href = 'login.php';
                 return;
             }
+
             showError(data.error);
-            
+
+            // ── NUEVO: mostrar detalle de nombres ambiguos ──
+            if (data.ambiguedades && data.ambiguedades.length > 0) {
+                const lista = data.ambiguedades.join('\n\n- ');
+                alert(`⚠️ NOMBRES AMBIGUOS (${data.ambiguedades.length}):\n\n- ${lista}\n\nCorrige estos nombres en el Excel para que sean más específicos.`);
+            }
+
             if (data.arbitros_faltantes && data.arbitros_faltantes.length > 0) {
                 const lista = data.arbitros_faltantes.join('\n- ');
                 alert(`⚠️ ÁRBITROS FALTANTES (${data.total_faltantes}):\n\n- ${lista}\n\nPor favor, regístralos antes de continuar.`);
@@ -341,6 +346,5 @@ function showError(message) {
     errorDiv.style.display = 'block';
     successDiv.style.display = 'none';
     
-    // Scroll hacia el error
     errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
