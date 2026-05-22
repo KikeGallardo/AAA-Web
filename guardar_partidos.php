@@ -11,16 +11,12 @@ try {
     if ($data === null) throw new Exception("JSON inválido: " . json_last_error_msg());
     if (!isset($data['partidos']) || !is_array($data['partidos'])) throw new Exception("Se esperaba 'partidos' array.");
 
-    // =============================================
-    // TORNEO: Obligatorio, viene del frontend
-    // =============================================
     $idTorneo = isset($data['idTorneo']) ? (int)$data['idTorneo'] : 0;
     if (!$idTorneo) {
         echo json_encode(["success" => false, "error" => "Debes seleccionar un torneo antes de guardar."]);
         exit;
     }
 
-    // Verificar que el torneo existe en la BD
     $stmtT = $conn->prepare("SELECT idTorneo FROM torneo WHERE idTorneo = ?");
     $stmtT->execute([$idTorneo]);
     if (!$stmtT->fetch()) {
@@ -30,9 +26,6 @@ try {
 
     $partidos = $data['partidos'];
 
-    // =============================================
-    // PASO 1: Recolectar valores únicos
-    // =============================================
     $nombresArbitros   = [];
     $nombresEquipos    = [];
     $nombresCategorias = [];
@@ -50,54 +43,26 @@ try {
     $nombresEquipos    = array_unique($nombresEquipos);
     $nombresCategorias = array_unique($nombresCategorias);
 
-    // =============================================
-    // PASO 2: Cargar árbitros en memoria (1 query)
-    // =============================================
-    $mapArbitros    = cargarTodosArbitros($conn);
-    $mapArbitrosRaw = cargarArbitrosRaw($conn);
-
-    // --- NUEVO: Detectar ambigüedades antes de continuar ---
-    $ambiguedades = [];
-    foreach ($nombresArbitros as $nombre) {
-        $coincidencias = buscarCoincidencias($mapArbitrosRaw, $nombre);
-        if (count($coincidencias) > 1) {
-            $ambiguedades[$nombre] = $coincidencias;
-        }
-    }
-    if (!empty($ambiguedades)) {
-        $mensajes = [];
-        foreach ($ambiguedades as $nombreExcel => $coincidentes) {
-            $mensajes[] = "\"$nombreExcel\" coincide con más de un árbitro: " . implode(', ', $coincidentes) . ". Por favor sé más específico en el Excel.";
-        }
-        echo json_encode([
-            "success"      => false,
-            "error"        => "Hay nombres ambiguos que coinciden con más de un árbitro.",
-            "ambiguedades" => $mensajes
-        ]);
-        exit;
-    }
+    $mapArbitros = cargarTodosArbitros($conn);
 
     $arbitrosFaltantes = [];
     foreach ($nombresArbitros as $nombre) {
-        if (!buscarIdEnMap($mapArbitros, $nombre, $mapArbitrosRaw)) {
+        if (!buscarIdEnMap($mapArbitros, $nombre)) {
             $arbitrosFaltantes[] = $nombre;
         }
     }
     if (!empty($arbitrosFaltantes)) {
         $debugClaves = obtenerClavesArbitros($conn);
         echo json_encode([
-            "success"             => false,
-            "error"               => "No se puede guardar la programación. Faltan árbitros por registrar.",
-            "arbitros_faltantes"  => array_values($arbitrosFaltantes),
-            "total_faltantes"     => count($arbitrosFaltantes),
+            "success" => false,
+            "error" => "No se puede guardar la programación. Faltan árbitros por registrar.",
+            "arbitros_faltantes" => array_values($arbitrosFaltantes),
+            "total_faltantes" => count($arbitrosFaltantes),
             "debug_mapa_arbitros" => $debugClaves
         ]);
         exit;
     }
 
-    // =============================================
-    // PASO 3: Validar categorías — NO se crean
-    // =============================================
     $mapCategorias = cargarCategorias($conn);
 
     $categoriasFaltantes = [];
@@ -108,27 +73,17 @@ try {
     }
     if (!empty($categoriasFaltantes)) {
         echo json_encode([
-            "success"              => false,
-            "error"                => "No se puede guardar la programación. Hay categorías que no existen en el sistema.",
+            "success" => false,
+            "error" => "No se puede guardar la programación. Hay categorías que no existen en el sistema.",
             "categorias_faltantes" => array_values($categoriasFaltantes),
-            "total_faltantes"      => count($categoriasFaltantes)
+            "total_faltantes" => count($categoriasFaltantes)
         ]);
         exit;
     }
 
-    // =============================================
-    // PASO 4: Cargar/crear equipos (solo equipos pueden crearse)
-    // =============================================
     $mapEquipos = cargarOCrearEquipos($conn, $nombresEquipos);
-
-    // =============================================
-    // PASO 5: Cargar conflictos de horario (1 query)
-    // =============================================
     $conflictosExistentes = cargarConflictos($conn, $partidos);
 
-    // =============================================
-    // PASO 6: Procesar y preparar batch INSERT
-    // =============================================
     $conn->beginTransaction();
 
     $filasParaInsertar = [];
@@ -155,13 +110,11 @@ try {
             $idCategoria = buscarIdEnMap($mapCategorias, $nombreCategoria);
             if (!$idCategoria) throw new Exception("Categoría no encontrada: '$nombreCategoria'");
 
-            // Para árbitros usamos la versión flexible con $mapArbitrosRaw
-            $idArbitroPrincipal = buscarIdEnMap($mapArbitros, $p['ARBITRO']     ?? '', $mapArbitrosRaw);
-            $idAsistente1       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 1'] ?? '', $mapArbitrosRaw);
-            $idAsistente2       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 2'] ?? '', $mapArbitrosRaw);
-            $idAsistente3       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 3'] ?? '', $mapArbitrosRaw);
+            $idArbitroPrincipal = buscarIdEnMap($mapArbitros, $p['ARBITRO']     ?? '');
+            $idAsistente1       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 1'] ?? '');
+            $idAsistente2       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 2'] ?? '');
+            $idAsistente3       = buscarIdEnMap($mapArbitros, $p['ASISTENTE 3'] ?? '');
 
-            // Verificar conflictos de horario
             $arbitrosAsignados = array_filter([$idArbitroPrincipal, $idAsistente1, $idAsistente2, $idAsistente3]);
             foreach ($arbitrosAsignados as $idArbitro) {
                 $clave = "{$idArbitro}_{$fecha}_{$hora}";
@@ -206,7 +159,6 @@ try {
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 
-
 // =============================================
 // FUNCIONES
 // =============================================
@@ -229,33 +181,6 @@ function cargarTodosArbitros(PDO $conn): array {
     return $map;
 }
 
-// Lista cruda de árbitros para búsqueda flexible
-function cargarArbitrosRaw(PDO $conn): array {
-    $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(nombre)) AS nombre, UPPER(TRIM(apellido)) AS apellido FROM arbitro");
-    $lista = [];
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $lista[] = [
-            'id'             => $row['idArbitro'],
-            'nombreCompleto' => $row['nombre'] . ' ' . $row['apellido'],
-        ];
-    }
-    return $lista;
-}
-
-// Devuelve todos los árbitros que coinciden con la búsqueda (para detectar ambigüedades)
-function buscarCoincidencias(array $raw, ?string $busqueda): array {
-    if (empty($busqueda)) return [];
-    $key = strtoupper(trim($busqueda));
-    $encontrados = [];
-    foreach ($raw as $arbitro) {
-        $nc = $arbitro['nombreCompleto'];
-        if (strpos($nc, $key) !== false || strpos($key, $nc) !== false) {
-            $encontrados[$arbitro['id']] = $nc;
-        }
-    }
-    return $encontrados;
-}
-
 function obtenerClavesArbitros(PDO $conn): array {
     $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(nombre)) AS nombre, UPPER(TRIM(apellido)) AS apellido FROM arbitro");
     $debug = [];
@@ -267,7 +192,7 @@ function obtenerClavesArbitros(PDO $conn): array {
         $debug[$row['idArbitro']] = [
             "bd_nombre"   => $nombre,
             "bd_apellido" => $apellido,
-            "claves"      => [
+            "claves" => [
                 "{$nombre} {$apellido}",
                 "{$primerNombre} {$primerApellido}",
                 "{$primerNombre} {$apellido}",
@@ -342,28 +267,18 @@ function insertarPartidosEnBatch(PDO $conn, array $filas): int {
     return $total;
 }
 
-// Búsqueda en mapa. Para árbitros se puede pasar $raw para activar búsqueda flexible.
-// Para categorías y equipos NO se pasa $raw, así la lógica es exacta como el original.
-function buscarIdEnMap(array $map, ?string $nombre, array $raw = []): ?int {
+function buscarIdEnMap(array $map, ?string $nombre): ?int {
     if (empty($nombre)) return null;
     $key = strtoupper(trim($nombre));
 
     // 1. Coincidencia exacta
     if (isset($map[$key])) return $map[$key];
 
-    // 2. Primer nombre + primer apellido (tokens 0 y 1)
+    // 2. Primer nombre + primer apellido
     $tokens = preg_split('/\s+/', $key);
     if (count($tokens) >= 2) {
         $clave = $tokens[0] . ' ' . $tokens[1];
         if (isset($map[$clave])) return $map[$clave];
-    }
-
-    // 3. Búsqueda flexible (solo para árbitros, cuando se pasa $raw)
-    if (!empty($raw)) {
-        $coincidencias = buscarCoincidencias($raw, $nombre);
-        if (count($coincidencias) === 1) {
-            return array_values($coincidencias)[0];
-        }
     }
 
     return null;
