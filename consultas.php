@@ -61,7 +61,6 @@ switch ($accion) {
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // Agrupar por torneo+fecha: 1 evento por torneo por día
     $grupos = [];
     while ($row = $result->fetch_assoc()) {
         $key = $row["idTorneo"] . "_" . $row["fecha"];
@@ -70,11 +69,10 @@ switch ($accion) {
                 "idTorneo"  => $row["idTorneo"],
                 "torneo"    => $row["torneo"],
                 "fecha"     => $row["fecha"],
-                "horaMin"   => $row["hora"],   // primera hora del día
+                "horaMin"   => $row["hora"],
                 "count"     => 0
             ];
         }
-        // guardar la hora más temprana como hora del evento
         if ($row["hora"] < $grupos[$key]["horaMin"]) {
             $grupos[$key]["horaMin"] = $row["hora"];
         }
@@ -83,7 +81,6 @@ switch ($accion) {
 
     $eventos = [];
     foreach ($grupos as $g) {
-        // Hora en formato 12h AM/PM para el título
         $horaFormateada = date("g:i A", strtotime($g["horaMin"]));
         $eventos[] = [
             "id"    => $g["idTorneo"] . "_" . $g["fecha"],
@@ -331,7 +328,6 @@ switch ($accion) {
     break;
 
     case 'listar_categorias_pago':
-    // Devuelve todas las categorías de pago, opcionalmente filtradas por torneo
     $idTorneo = !empty($_POST['idTorneo']) ? (int)$_POST['idTorneo'] : 0;
     if ($idTorneo > 0) {
         $stmtC = $conn->prepare('SELECT idCategoriaPagoArbitro, nombreCategoria FROM categoriaPagoArbitro WHERE idTorneo = ? ORDER BY nombreCategoria');
@@ -366,9 +362,8 @@ switch ($accion) {
     $idArbitro2      = !empty($_POST['idArbitro2'])      ? (int)$_POST['idArbitro2']      : null;
     $idArbitro3      = !empty($_POST['idArbitro3'])      ? (int)$_POST['idArbitro3']      : null;
     $idArbitro4      = !empty($_POST['idArbitro4'])      ? (int)$_POST['idArbitro4']      : null;
-    $forzar          = !empty($_POST['forzar']);   // el JS reenvía con forzar=1 si el usuario confirma
+    $forzar          = !empty($_POST['forzar']);
 
-    // ── Validaciones básicas ──────────────────────────────
     if ($idPartido <= 0)
         { echo json_encode(['status'=>'error','msg'=>'ID de partido inválido']); exit; }
     if (!$fecha || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha))
@@ -380,24 +375,19 @@ switch ($accion) {
     if ($idEquipo1 === $idEquipo2)
         { echo json_encode(['status'=>'error','msg'=>'El equipo local y visitante no pueden ser el mismo']); exit; }
 
-    // ── Hora razonable (06:00 – 23:00) ───────────────────
     $horaH = (int)explode(':', $hora)[0];
     if ($horaH < 6 || $horaH >= 23)
         { echo json_encode(['status'=>'error','msg'=>"Hora fuera de rango permitido (06:00 – 23:00)"]); exit; }
 
-    // ── Árbitros duplicados ───────────────────────────────
     $arbitros = array_filter([$idArbitro1,$idArbitro2,$idArbitro3,$idArbitro4]);
     if (count($arbitros) !== count(array_unique($arbitros)))
         { echo json_encode(['status'=>'error','msg'=>'El mismo árbitro está asignado a más de un puesto']); exit; }
 
-    // ── Conflicto de horario (±30 min) ───────────────────
     if (!$forzar && !empty($arbitros)) {
         $placeholders = implode(',', array_fill(0, count($arbitros), '?'));
         $arbIds       = array_values($arbitros);
         $types        = str_repeat('i', count($arbIds));
 
-        // Buscar partidos en la misma fecha cuya hora esté a menos de 30 min,
-        // excluyendo el partido que se está editando
         $sqlConflicto = "
             SELECT a.nombre, a.apellido,
                    p.hora AS horaConflicto, p.idPartido
@@ -436,7 +426,6 @@ switch ($accion) {
         }
     }
 
-    // ── Ejecutar UPDATE ───────────────────────────────────
     $stmt = $conn->prepare(
         'UPDATE partido
          SET fecha=?, hora=?, canchaLugar=?, categoriaText=?,
@@ -497,14 +486,13 @@ switch ($accion) {
     case 'buscar_arbitros_programados':
     $fechaInicio = $_POST['fechaInicio'] ?? '';
     $fechaFin    = $_POST['fechaFin']    ?? '';
-    $torneos     = $_POST['torneos']     ?? []; // array de idTorneo
+    $torneos     = $_POST['torneos']     ?? [];
 
     if (empty($fechaInicio) || empty($fechaFin)) {
         echo json_encode(['arbitros' => [], 'torneos_nombre' => '']);
         exit;
     }
 
-    // Construir filtro de torneos
     $whereTorneo = '';
     $extraTypes  = '';
     $extraValues = [];
@@ -516,7 +504,6 @@ switch ($accion) {
         $extraValues  = array_map('intval', $torneos);
     }
 
-    // Query: árbitros distintos que participan en partidos del rango+torneos
     $sql = "
         SELECT
             a.idArbitro,
@@ -554,7 +541,6 @@ switch ($accion) {
     }
     $stmt->close();
 
-    // Nombres de torneos seleccionados (para mostrar en UI)
     $torneos_nombre = '';
     if (!empty($torneos)) {
         $phs   = implode(',', array_fill(0, count($torneos), '?'));
@@ -575,9 +561,7 @@ switch ($accion) {
         'torneos_nombre' => $torneos_nombre
     ]);
     break;
-// ── REGISTRAR IMPRESIÓN ──────────────────────────────────────
-    // Incrementa en 1 el contador del árbitro y guarda la fecha.
-    // Llamado automáticamente al abrir generar_cuentas_cobro_html.php
+
     case 'registrar_impresion':
         $idArbitro = isset($_POST['idArbitro']) ? (int)$_POST['idArbitro'] : 0;
 
@@ -586,7 +570,6 @@ switch ($accion) {
             exit;
         }
 
-        // INSERT ... ON DUPLICATE KEY UPDATE  → upsert atómico
         $stmt = $conn->prepare("
             INSERT INTO contador_impresion (idArbitro, totalImpresiones, ultimaImpresion)
             VALUES (?, 1, NOW())
@@ -597,7 +580,6 @@ switch ($accion) {
         $stmt->bind_param("i", $idArbitro);
 
         if ($stmt->execute()) {
-            // Devolver el total actualizado
             $stmt2 = $conn->prepare("
                 SELECT totalImpresiones FROM contador_impresion WHERE idArbitro = ?
             ");
@@ -613,8 +595,6 @@ switch ($accion) {
         $stmt->close();
         break;
 
-    // ── OBTENER CONTADOR ─────────────────────────────────────────
-    // Devuelve el total actual de impresiones de un árbitro.
     case 'obtener_contador':
         $idArbitro = isset($_POST['idArbitro']) ? (int)$_POST['idArbitro'] : 0;
 
@@ -634,8 +614,6 @@ switch ($accion) {
         echo json_encode(['total' => $row ? (int)$row['totalImpresiones'] : 0]);
         break;
 
-    // ── AJUSTAR CONTADOR ─────────────────────────────────────────
-    // Permite corregir manualmente el valor del contador.
     case 'ajustar_contador':
         $idArbitro = isset($_POST['idArbitro']) ? (int)$_POST['idArbitro']  : 0;
         $nuevo     = isset($_POST['nuevo'])     ? (int)$_POST['nuevo']      : -1;
@@ -661,5 +639,46 @@ switch ($accion) {
         }
         $stmt->close();
         break;
-    }
+
+    // ── AGREGAR CATEGORÍA DE ÁRBITRO ─────────────────────────────
+    case 'agregar_categoria_arbitro':
+        $nombre = strtoupper(trim($_POST['nombre'] ?? ''));
+        if ($nombre === '') {
+            echo json_encode(['status' => 'error', 'msg' => 'Nombre vacío']);
+            exit;
+        }
+        $stmt = $conn->prepare("INSERT INTO categoriaArbitro (nombre) VALUES (?)");
+        $stmt->bind_param("s", $nombre);
+        if ($stmt->execute()) {
+            $res = $conn->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
+            $cats = [];
+            while ($r = $res->fetch_assoc()) $cats[] = $r['nombre'];
+            echo json_encode(['status' => 'ok', 'categorias' => $cats]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => 'Ya existe o error al guardar']);
+        }
+        $stmt->close();
+        break;
+
+    // ── ELIMINAR CATEGORÍA DE ÁRBITRO ────────────────────────────
+    case 'eliminar_categoria_arbitro':
+        $nombre = trim($_POST['nombre'] ?? '');
+        if ($nombre === '') {
+            echo json_encode(['status' => 'error', 'msg' => 'Nombre vacío']);
+            exit;
+        }
+        $stmt = $conn->prepare("DELETE FROM categoriaArbitro WHERE nombre = ?");
+        $stmt->bind_param("s", $nombre);
+        if ($stmt->execute()) {
+            $res = $conn->query("SELECT nombre FROM categoriaArbitro ORDER BY nombre ASC");
+            $cats = [];
+            while ($r = $res->fetch_assoc()) $cats[] = $r['nombre'];
+            echo json_encode(['status' => 'ok', 'categorias' => $cats]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => 'Error al eliminar']);
+        }
+        $stmt->close();
+        break;
+
+}
 ?>
