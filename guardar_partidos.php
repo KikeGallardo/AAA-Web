@@ -11,6 +11,8 @@ try {
     if ($data === null) throw new Exception("JSON inválido: " . json_last_error_msg());
     if (!isset($data['partidos']) || !is_array($data['partidos'])) throw new Exception("Se esperaba 'partidos' array.");
 
+    $forzarDuplicados = !empty($data['forzarDuplicados']);
+
     $idTorneo = isset($data['idTorneo']) ? (int)$data['idTorneo'] : 0;
     if (!$idTorneo) {
         echo json_encode(["success" => false, "error" => "Debes seleccionar un torneo antes de guardar."]);
@@ -43,40 +45,108 @@ try {
     $nombresEquipos    = array_unique($nombresEquipos);
     $nombresCategorias = array_unique($nombresCategorias);
 
-    $mapArbitros = cargarTodosArbitros($conn);
+    // Construir mapa de árbitros separando únicos de ambiguos
+    $arbitrosRaw = cargarTodosArbitros($conn);
+    $mapArbitros  = [];
+    $mapaAmbiguos = [];
+    foreach ($arbitrosRaw as $key => $entries) {
+        if (count($entries) === 1) {
+            $mapArbitros[$key] = array_key_first($entries);
+        } else {
+            $mapaAmbiguos[$key] = array_map(
+                fn($id, $name) => ['id' => $id, 'nombre' => $name],
+                array_keys($entries), array_values($entries)
+            );
+        }
+    }
 
-    $arbitrosFaltantes = [];
+    // Mapeo manual enviado desde el frontend {nombreExcel: idArbitro}
+    $mapeoArbitrosManual = $data['mapeoArbitrosManual'] ?? [];
+
+    // Inyectar mapeos manuales (resuelve tanto faltantes como ambiguos)
+    foreach ($mapeoArbitrosManual as $nombreExcel => $idArbitro) {
+        $mapArbitros[strtoupper(trim($nombreExcel))] = (int)$idArbitro;
+    }
+
+    // Clasificar cada árbitro del Excel: resuelto, ambiguo o faltante
+    $arbitrosFaltantes    = [];
+    $arbitrosAmbiguosRes  = [];
     foreach ($nombresArbitros as $nombre) {
-        if (!buscarIdEnMap($mapArbitros, $nombre)) {
+        if (buscarIdEnMap($mapArbitros, $nombre)) continue;
+
+        $key = strtoupper(trim($nombre));
+        $ambiguousKey = null;
+        if (isset($mapaAmbiguos[$key])) {
+            $ambiguousKey = $key;
+        } else {
+            $tokens = preg_split('/\s+/', $key);
+            if (count($tokens) >= 2) {
+                $clave = $tokens[0] . ' ' . $tokens[1];
+                if (isset($mapaAmbiguos[$clave])) $ambiguousKey = $clave;
+            }
+        }
+
+        if ($ambiguousKey !== null) {
+            $arbitrosAmbiguosRes[] = [
+                'nombre_excel' => $nombre,
+                'opciones'     => array_values($mapaAmbiguos[$ambiguousKey])
+            ];
+        } else {
             $arbitrosFaltantes[] = $nombre;
         }
     }
-    if (!empty($arbitrosFaltantes)) {
-        $debugClaves = obtenerClavesArbitros($conn);
+
+    // Primero resolver ambigüedades
+    if (!empty($arbitrosAmbiguosRes)) {
         echo json_encode([
-            "success" => false,
-            "error" => "No se puede guardar la programación. Faltan árbitros por registrar.",
-            "arbitros_faltantes" => array_values($arbitrosFaltantes),
-            "total_faltantes" => count($arbitrosFaltantes),
-            "debug_mapa_arbitros" => $debugClaves
+            "success"           => false,
+            "error"             => count($arbitrosAmbiguosRes) . " nombre(s) del Excel coinciden con más de un árbitro.",
+            "arbitros_ambiguos" => $arbitrosAmbiguosRes
+        ]);
+        exit;
+    }
+
+    // Luego resolver faltantes
+    if (!empty($arbitrosFaltantes)) {
+        $stmt = $conn->query("SELECT idArbitro, CONCAT(nombre, ' ', apellido) AS nombre FROM arbitro ORDER BY nombre, apellido");
+        $disponibles = [];
+        while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $disponibles[] = ['id' => $r['idArbitro'], 'nombre' => $r['nombre']];
+        }
+        echo json_encode([
+            "success"              => false,
+            "error"                => "Hay árbitros del Excel que no están registrados en el sistema.",
+            "arbitros_faltantes"   => array_values($arbitrosFaltantes),
+            "arbitros_disponibles" => $disponibles
         ]);
         exit;
     }
 
     $mapCategorias = cargarCategorias($conn);
 
+    // Mapeo manual enviado desde el frontend {nombreExcel: idCategoria}
+    $mapeoManual = $data['mapeoCategoriasManual'] ?? [];
+
     $categoriasFaltantes = [];
     foreach ($nombresCategorias as $nombre) {
-        if (!buscarIdEnMap($mapCategorias, $nombre)) {
+        if (!buscarIdEnMap($mapCategorias, $nombre) && !isset($mapeoManual[$nombre])) {
             $categoriasFaltantes[] = $nombre;
         }
     }
     if (!empty($categoriasFaltantes)) {
+        // Devolver categorías disponibles para que el usuario escoja
+        $disponibles = [];
+        foreach ($mapCategorias as $nombre => $id) {
+            $disponibles[$id] = $nombre;
+        }
+        ksort($disponibles);
+        $lista = array_map(fn($id, $nom) => ['id' => $id, 'nombre' => $nom], array_keys($disponibles), $disponibles);
+
         echo json_encode([
-            "success" => false,
-            "error" => "No se puede guardar la programación. Hay categorías que no existen en el sistema.",
-            "categorias_faltantes" => array_values($categoriasFaltantes),
-            "total_faltantes" => count($categoriasFaltantes)
+            "success"                => false,
+            "error"                  => "Hay categorías del Excel que no existen en el sistema.",
+            "categorias_faltantes"   => array_values($categoriasFaltantes),
+            "categorias_disponibles" => $lista
         ]);
         exit;
     }
@@ -86,9 +156,12 @@ try {
 
     $conn->beginTransaction();
 
-    $filasParaInsertar = [];
-    $errores           = [];
-    $conflictosNuevos  = [];
+    $filasParaInsertar  = [];
+    $errores            = [];
+    $advertencias       = [];
+    $duplicados         = [];
+    $conflictosNuevos   = [];
+    $partidosVistos     = [];
 
     foreach ($partidos as $i => $p) {
         try {
@@ -99,7 +172,9 @@ try {
             $fecha = convertirFecha($p['FECHA']);
             if (!$fecha) throw new Exception("Fecha inválida: " . $p['FECHA']);
 
-            $hora = convertirHora($p['HORA'] ?? '');
+            $advertenciaHora = null;
+            $hora = convertirHora($p['HORA'] ?? '', $advertenciaHora);
+            if ($advertenciaHora) $advertencias[] = "Fila " . ($i + 1) . ": $advertenciaHora";
 
             $idEquipo1 = buscarIdEnMap($mapEquipos, $p['EQUIPO A']);
             $idEquipo2 = buscarIdEnMap($mapEquipos, $p['EQUIPO B']);
@@ -107,7 +182,8 @@ try {
 
             $nombreCategoria = trim($p['CATEGORIA'] ?? '');
             if (empty($nombreCategoria)) throw new Exception("Categoría vacía");
-            $idCategoria = buscarIdEnMap($mapCategorias, $nombreCategoria);
+            $idCategoria = buscarIdEnMap($mapCategorias, $nombreCategoria)
+                        ?? (isset($mapeoManual[$nombreCategoria]) ? (int)$mapeoManual[$nombreCategoria] : null);
             if (!$idCategoria) throw new Exception("Categoría no encontrada: '$nombreCategoria'");
 
             $idArbitroPrincipal = buscarIdEnMap($mapArbitros, $p['ARBITRO']     ?? '');
@@ -127,16 +203,34 @@ try {
                 $conflictosNuevos["{$idArbitro}_{$fecha}_{$hora}"] = true;
             }
 
+            $cancha = $p['ESCENARIO'] ?? '';
+            $clavePartido = "{$idEquipo1}_{$idEquipo2}_{$fecha}_{$hora}_{$cancha}";
+            if (isset($partidosVistos[$clavePartido])) {
+                $duplicados[] = "Fila " . ($i + 1) . ": {$p['EQUIPO A']} vs {$p['EQUIPO B']} el {$fecha} a las {$hora} en '{$cancha}'";
+            }
+            $partidosVistos[$clavePartido] = true;
+
             $filasParaInsertar[] = [
                 $idEquipo1, $idEquipo2, $fecha, $hora,
                 $idCategoria, $idTorneo,
                 $idArbitroPrincipal, $idAsistente1, $idAsistente2, $idAsistente3,
-                $p['ESCENARIO'] ?? '', $p['CATEGORIA'] ?? ''
+                $cancha, $p['CATEGORIA'] ?? ''
             ];
 
         } catch (Exception $e) {
             $errores[] = "Fila " . ($i + 1) . ": " . $e->getMessage();
         }
+    }
+
+    // Si hay duplicados y el usuario no confirmó, detener sin guardar
+    if (!empty($duplicados) && !$forzarDuplicados) {
+        $conn->rollBack();
+        echo json_encode([
+            "success"    => false,
+            "duplicados" => $duplicados,
+            "error"      => "Se encontraron " . count($duplicados) . " partido(s) duplicado(s). Confirma si deseas guardar de todas formas."
+        ]);
+        exit;
     }
 
     $guardados = 0;
@@ -147,11 +241,12 @@ try {
     $conn->commit();
 
     echo json_encode([
-        "success"   => true,
-        "guardados" => $guardados,
-        "total"     => count($partidos),
-        "errores"   => $errores,
-        "message"   => "$guardados partidos guardados correctamente"
+        "success"      => true,
+        "guardados"    => $guardados,
+        "total"        => count($partidos),
+        "errores"      => $errores,
+        "advertencias" => $advertencias,
+        "message"      => "$guardados partidos guardados correctamente"
     ]);
 
 } catch (Exception $e) {
@@ -165,20 +260,24 @@ try {
 
 function cargarTodosArbitros(PDO $conn): array {
     $stmt = $conn->query("SELECT idArbitro, UPPER(TRIM(nombre)) AS nombre, UPPER(TRIM(apellido)) AS apellido FROM arbitro");
-    $map = [];
+    $rawMap = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $id             = $row['idArbitro'];
         $nombre         = $row['nombre'];
         $apellido       = $row['apellido'];
         $primerNombre   = explode(' ', $nombre)[0];
         $primerApellido = explode(' ', $apellido)[0];
-
-        $map["{$nombre} {$apellido}"]             = $id;
-        $map["{$primerNombre} {$primerApellido}"] = $id;
-        $map["{$primerNombre} {$apellido}"]       = $id;
-        $map["{$nombre} {$primerApellido}"]       = $id;
+        $fullName       = "{$nombre} {$apellido}";
+        foreach (array_unique([
+            "{$nombre} {$apellido}",
+            "{$primerNombre} {$primerApellido}",
+            "{$primerNombre} {$apellido}",
+            "{$nombre} {$primerApellido}"
+        ]) as $key) {
+            $rawMap[$key][$id] = $fullName;
+        }
     }
-    return $map;
+    return $rawMap;
 }
 
 function obtenerClavesArbitros(PDO $conn): array {
@@ -307,19 +406,28 @@ function convertirFecha($f): ?string {
     return null;
 }
 
-function convertirHora($hora): string {
+function convertirHora($hora, &$advertencia = null): string {
     if (is_numeric($hora) && $hora < 1 && $hora > 0) {
         $min = round($hora * 24 * 60);
         return sprintf("%02d:%02d:00", floor($min / 60), $min % 60);
     }
-    if (is_string($hora) && preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i', $hora, $m)) {
-        $h = (int)$m[1]; $min = (int)$m[2];
-        if (!empty($m[3])) {
-            if (strtoupper($m[3]) === 'PM' && $h < 12) $h += 12;
-            if (strtoupper($m[3]) === 'AM' && $h === 12) $h = 0;
-        }
-        return sprintf("%02d:%02d:00", $h, $min);
-    }
     if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $hora)) return $hora;
+    if (is_string($hora)) {
+        // Normalizar separadores: coma o punto entre dígitos → dos puntos
+        $normalizada = preg_replace('/(\d)[,.](\d)/', '$1:$2', trim($hora));
+        if (preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i', $normalizada, $m)) {
+            $h = (int)$m[1]; $min = (int)$m[2];
+            if (!empty($m[3])) {
+                if (strtoupper($m[3]) === 'PM' && $h < 12) $h += 12;
+                if (strtoupper($m[3]) === 'AM' && $h === 12) $h = 0;
+            }
+            $resultado = sprintf("%02d:%02d:00", $h, $min);
+            if ($normalizada !== trim($hora)) {
+                $advertencia = "Hora corregida: '{$hora}' → '{$resultado}'";
+            }
+            return $resultado;
+        }
+    }
+    $advertencia = "Hora inválida: '{$hora}' → se usó 00:00:00";
     return '00:00:00';
 }

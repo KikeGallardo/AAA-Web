@@ -54,10 +54,26 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function selectEquipo(id, valorActual, label) {
+    const actual    = listaEquipos.find(e => String(e.idEquipo) === String(valorActual));
+    const dlId      = id + "-list";
+    const opts      = listaEquipos.map(e =>
+      `<option value="${esc(e.nombreEquipo)}" data-id="${e.idEquipo}">`
+    ).join("");
     return `<label class="edit-label">${label} <span style="color:#ef4444">*</span>
-      ${mkSelect(id, listaEquipos, valorActual, "Seleccionar equipo", "idEquipo", "nombreEquipo")}
+      <input type="text" id="${id}-text" class="edit-input" autocomplete="off"
+             value="${esc(actual?.nombreEquipo || "")}" list="${dlId}"
+             oninput="syncEquipoId('${id}')">
+      <datalist id="${dlId}">${opts}</datalist>
+      <input type="hidden" id="${id}" value="${esc(valorActual || "")}">
     </label>`;
   }
+
+  window.syncEquipoId = function(id) {
+    const txt   = document.getElementById(id + "-text")?.value.trim().toLowerCase();
+    const match = listaEquipos.find(e => e.nombreEquipo.toLowerCase() === txt);
+    const hid   = document.getElementById(id);
+    if (hid) hid.value = match ? String(match.idEquipo) : "";
+  };
 
   function selectCategoria(id, valorActual, label) {
     return `<label class="edit-label">${label}
@@ -361,19 +377,23 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // ── Feedback en tiempo real: equipos iguales ──────────
-    const selEq1live = document.getElementById("eh-eq1-"+id);
-    const selEq2live = document.getElementById("eh-eq2-"+id);
+    const hidEq1live  = document.getElementById("eh-eq1-"+id);
+    const hidEq2live  = document.getElementById("eh-eq2-"+id);
+    const txtEq1live  = document.getElementById("eh-eq1-"+id+"-text");
+    const txtEq2live  = document.getElementById("eh-eq2-"+id+"-text");
     function checkEquipos() {
-      const same = selEq1live?.value && selEq1live.value === selEq2live?.value;
-      [selEq1live, selEq2live].forEach(el => {
+      syncEquipoId("eh-eq1-"+id);
+      syncEquipoId("eh-eq2-"+id);
+      const same = hidEq1live?.value && hidEq1live.value === hidEq2live?.value;
+      [txtEq1live, txtEq2live].forEach(el => {
         if (!el) return;
         el.style.borderColor = same ? "#ef4444" : "";
         el.style.boxShadow   = same ? "0 0 0 2px rgba(239,68,68,.2)" : "";
         el.title             = same ? "No pueden ser el mismo equipo" : "";
       });
     }
-    if (selEq1live) selEq1live.addEventListener("change", checkEquipos);
-    if (selEq2live) selEq2live.addEventListener("change", checkEquipos);
+    if (txtEq1live) txtEq1live.addEventListener("input", checkEquipos);
+    if (txtEq2live) txtEq2live.addEventListener("input", checkEquipos);
   };
 
   // ── Helpers de validación visual ─────────────────────────
@@ -437,11 +457,11 @@ document.addEventListener("DOMContentLoaded", function () {
       hayError = true;
     }
     if (!idEq1) {
-      setFieldError(get("eh-eq1-"+id), "Selecciona el equipo local");
+      setFieldError(get("eh-eq1-"+id+"-text"), "Selecciona el equipo local");
       hayError = true;
     }
     if (!idEq2) {
-      setFieldError(get("eh-eq2-"+id), "Selecciona el equipo visitante");
+      setFieldError(get("eh-eq2-"+id+"-text"), "Selecciona el equipo visitante");
       hayError = true;
     }
     if (hayError) {
@@ -451,8 +471,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── Mismo equipo local = visitante ─────────────────────
     if (idEq1 === idEq2) {
-      setFieldError(get("eh-eq1-"+id), "No puede ser igual al visitante");
-      setFieldError(get("eh-eq2-"+id), "No puede ser igual al local");
+      setFieldError(get("eh-eq1-"+id+"-text"), "No puede ser igual al visitante");
+      setFieldError(get("eh-eq2-"+id+"-text"), "No puede ser igual al local");
       showBanner(id, "❌ El equipo local y visitante no pueden ser el mismo.", "error");
       return;
     }
@@ -545,18 +565,21 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // ── Éxito: actualizar fila ────────────────────────
-        document.getElementById("edit-editor-"+id).remove();
-
         const tr = document.querySelector(`tr[data-id="${id}"]`);
         const n  = d.nombres || {};
-        const selEq1 = get("eh-eq1-"+id);
-        const selEq2 = get("eh-eq2-"+id);
-        const nomEq1 = selEq1?.options[selEq1.selectedIndex]?.text || n.eq1 || "—";
-        const nomEq2 = selEq2?.options[selEq2.selectedIndex]?.text || n.eq2 || "—";
+
+        // Leer los valores del editor ANTES de eliminarlo
+        const nomEq1    = get("eh-eq1-"+id+"-text")?.value.trim() || n.eq1 || "—";
+        const nomEq2    = get("eh-eq2-"+id+"-text")?.value.trim() || n.eq2 || "—";
+        const nuevaCancha = get("eh-cancha-"+id)?.value.trim() || "—";
+        const nuevaCat    = get("eh-cat-"+id)?.value.trim()    || "—";
+        const nuevaCatPago = get("eh-catpago-"+id)?.value || "";
+
+        document.getElementById("edit-editor-"+id).remove();
 
         tr.cells[0].innerHTML   = `<strong>${formatHora(hora+":00")}</strong>`;
-        tr.cells[1].textContent = get("eh-cancha-"+id)?.value.trim() || "—";
-        tr.cells[2].textContent = get("eh-cat-"+id)?.value.trim()    || "—";
+        tr.cells[1].textContent = nuevaCancha;
+        tr.cells[2].textContent = nuevaCat;
         tr.querySelector('[data-campo="equipoLocal"]').textContent     = nomEq1;
         tr.querySelector('[data-campo="equipoVisitante"]').textContent = nomEq2;
         tr.querySelector('[data-campo="arb1"]').textContent = (n.n1||"").trim() || "—";
@@ -566,10 +589,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Actualizar data-partido para próximas ediciones
         const p = JSON.parse(decodeURIComponent(tr.dataset.partido));
-        p.fecha = fecha; p.hora = hora+":00"; p.cancha = get("eh-cancha-"+id).value.trim();
-        p.categoria = get("eh-cat-"+id).value.trim();
+        p.fecha = fecha; p.hora = hora+":00"; p.cancha = nuevaCancha;
+        p.categoria = nuevaCat;
         p.idEquipo1 = idEq1; p.idEquipo2 = idEq2;
-        p.idCategoriaPago = get("eh-catpago-"+id)?.value || "";
+        p.idCategoriaPago = nuevaCatPago;
         p.idArbitro1 = a1; p.idArbitro2 = a2; p.idArbitro3 = a3; p.idArbitro4 = a4;
         tr.dataset.partido = encodeURIComponent(JSON.stringify(p));
 
@@ -585,9 +608,11 @@ document.addEventListener("DOMContentLoaded", function () {
   window.clearErrors = (id) => {
     const banner = document.getElementById("eh-banner-"+id);
     if (banner) banner.remove();
-    ["eh-hora","eh-fecha","eh-cancha","eh-cat","eh-eq1","eh-eq2",
+    ["eh-hora","eh-fecha","eh-cancha","eh-cat","eh-eq1-"+id+"-text","eh-eq2-"+id+"-text",
      "eh-catpago","eh-a1","eh-a2","eh-a3","eh-a4"].forEach(prefix => {
-      const el = document.getElementById(prefix+"-"+id);
+      const el = document.getElementById(
+        prefix.includes("-text") ? prefix : prefix+"-"+id
+      );
       if (el) { el.style.borderColor = ""; el.style.boxShadow = ""; el.title = ""; }
     });
   };

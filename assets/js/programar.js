@@ -255,9 +255,13 @@ async function guardarPartidos() {
             body: JSON.stringify({
                 idTorneo: idTorneo,
                 nombreTorneo: nombreTorneo,
-                partidos: partidosData
+                partidos: partidosData,
+                forzarDuplicados: window._forzarDuplicados || false,
+                mapeoCategoriasManual: window._mapeoCategoriasManual || {},
+                mapeoArbitrosManual: window._mapeoArbitrosManual || {}
             })
         });
+        window._forzarDuplicados = false;
         
         console.log('Response status:', response.status);
         const responseText = await response.text();
@@ -272,6 +276,17 @@ async function guardarPartidos() {
         
         loading.style.display = 'none';
         
+        if (data.duplicados && data.duplicados.length > 0) {
+            loading.style.display = 'none';
+            const lista = data.duplicados.join('\n');
+            const confirmar = confirm(`⚠️ PARTIDOS DUPLICADOS (${data.duplicados.length}):\n\n${lista}\n\n¿Deseas guardar de todas formas?`);
+            if (confirmar) {
+                window._forzarDuplicados = true;
+                await guardarPartidos();
+            }
+            return;
+        }
+
         if (data.error) {
             console.error("Error del servidor:", data.error);
 
@@ -283,26 +298,25 @@ async function guardarPartidos() {
 
             showError(data.error);
 
-            // ── NUEVO: mostrar detalle de nombres ambiguos ──
-            if (data.ambiguedades && data.ambiguedades.length > 0) {
-                const lista = data.ambiguedades.join('\n\n- ');
-                alert(`⚠️ NOMBRES AMBIGUOS (${data.ambiguedades.length}):\n\n- ${lista}\n\nCorrige estos nombres en el Excel para que sean más específicos.`);
+            if (data.arbitros_ambiguos && data.arbitros_ambiguos.length > 0) {
+                abrirModalAmbiguos(data.arbitros_ambiguos);
+                return;
             }
 
             if (data.arbitros_faltantes && data.arbitros_faltantes.length > 0) {
-                const lista = data.arbitros_faltantes.join('\n- ');
-                alert(`⚠️ ÁRBITROS FALTANTES (${data.total_faltantes}):\n\n- ${lista}\n\nPor favor, regístralos antes de continuar.`);
+                abrirModalArbitros(data.arbitros_faltantes, data.arbitros_disponibles || []);
             }
 
             if (data.categorias_faltantes && data.categorias_faltantes.length > 0) {
-                const lista = data.categorias_faltantes.join('\n- ');
-                alert(`⚠️ CATEGORÍAS NO ENCONTRADAS (${data.categorias_faltantes.length}):\n\n- ${lista}\n\nCreá estas categorías primero y luego volvé a intentarlo.`);
+                abrirModalCategorias(data.categorias_faltantes, data.categorias_disponibles || []);
             }
 
             return;
         }
         
         if (data.success) {
+            window._mapeoCategoriasManual = {};
+            window._mapeoArbitrosManual   = {};
             successDiv.textContent = `✓ ${data.message} - ${data.guardados} partidos guardados`;
             successDiv.style.display = 'block';
             editedCells.clear();
@@ -311,6 +325,10 @@ async function guardarPartidos() {
                 cell.classList.remove('edited-cell');
             });
             
+            if (data.advertencias && data.advertencias.length > 0) {
+                alert(`⚠️ HORAS CORREGIDAS AUTOMÁTICAMENTE (${data.advertencias.length}):\n\n` + data.advertencias.join('\n') + '\n\nRevisa estas filas en la programación.');
+            }
+
             if (data.errores && data.errores.length > 0) {
                 console.warn("Errores durante el guardado:", data.errores);
                 alert("Se guardaron los partidos pero hubo algunos errores:\n\n" + data.errores.join('\n'));
@@ -335,6 +353,151 @@ function exportarExcel() {
     
     successDiv.textContent = '✓ Excel exportado correctamente';
     successDiv.style.display = 'block';
+}
+
+// ── Modal de árbitros ambiguos ───────────────────────────────
+function abrirModalAmbiguos(ambiguos) {
+    const filas = ambiguos.map(item => {
+        const opciones = item.opciones.map(a =>
+            `<option value="${a.id}">${a.nombre}</option>`
+        ).join('');
+        return `
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:.82rem; font-weight:600; color:#374151; margin-bottom:.35rem;">
+                    🔀 "${item.nombre_excel}" → escoger:
+                </div>
+                <select data-excel="${item.nombre_excel}"
+                        style="width:100%; padding:.5rem .7rem; border:1.5px solid #d1d5db;
+                               border-radius:7px; font-size:.9rem; font-family:inherit;">
+                    <option value="">— Selecciona un árbitro —</option>
+                    ${opciones}
+                </select>
+            </div>`;
+    }).join('');
+
+    document.getElementById('modalArbAmbiguosBody').innerHTML = filas;
+    document.getElementById('modalArbAmbiguos').style.display = 'flex';
+}
+
+async function confirmarMapeosAmbiguos() {
+    const selects = document.querySelectorAll('#modalArbAmbiguosBody select');
+    const mapeo = {};
+    let incompleto = false;
+
+    selects.forEach(sel => {
+        if (!sel.value) { incompleto = true; return; }
+        mapeo[sel.dataset.excel] = parseInt(sel.value);
+    });
+
+    if (incompleto) {
+        alert('Debes seleccionar un árbitro para cada nombre antes de continuar.');
+        return;
+    }
+
+    document.getElementById('modalArbAmbiguos').style.display = 'none';
+    window._mapeoArbitrosManual = { ...(window._mapeoArbitrosManual || {}), ...mapeo };
+    await guardarPartidos();
+}
+
+// ── Modal de árbitros no encontrados ─────────────────────────
+let _arbitrosFaltantes = [];
+let _arbitrosDisponibles = [];
+
+function abrirModalArbitros(faltantes, disponibles) {
+    _arbitrosFaltantes   = faltantes;
+    _arbitrosDisponibles = disponibles;
+
+    const opciones = disponibles.map(a =>
+        `<option value="${a.id}">${a.nombre}</option>`
+    ).join('');
+
+    const filas = faltantes.map(nombre => `
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:.82rem; font-weight:600; color:#374151; margin-bottom:.35rem;">
+                🧑‍⚖️ "${nombre}" → escoger:
+            </div>
+            <select data-excel="${nombre}"
+                    style="width:100%; padding:.5rem .7rem; border:1.5px solid #d1d5db;
+                           border-radius:7px; font-size:.9rem; font-family:inherit;">
+                <option value="">— Selecciona un árbitro —</option>
+                ${opciones}
+            </select>
+        </div>
+    `).join('');
+
+    document.getElementById('modalArbBody').innerHTML = filas;
+    document.getElementById('modalArbFaltantes').style.display = 'flex';
+}
+
+async function confirmarMapeosArbitros() {
+    const selects = document.querySelectorAll('#modalArbBody select');
+    const mapeo = {};
+    let incompleto = false;
+
+    selects.forEach(sel => {
+        if (!sel.value) { incompleto = true; return; }
+        mapeo[sel.dataset.excel] = parseInt(sel.value);
+    });
+
+    if (incompleto) {
+        alert('Debes seleccionar un árbitro para cada fila antes de continuar.');
+        return;
+    }
+
+    document.getElementById('modalArbFaltantes').style.display = 'none';
+    window._mapeoArbitrosManual = mapeo;
+    await guardarPartidos();
+}
+
+// ── Modal de categorías no encontradas ───────────────────────
+let _categoriasFaltantes = [];
+let _categoriasDisponibles = [];
+
+function abrirModalCategorias(faltantes, disponibles) {
+    _categoriasFaltantes  = faltantes;
+    _categoriasDisponibles = disponibles;
+
+    const opciones = disponibles.map(c =>
+        `<option value="${c.id}">${c.nombre}</option>`
+    ).join('');
+
+    const filas = faltantes.map(nombre => `
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:.82rem; font-weight:600; color:#374151; margin-bottom:.35rem;">
+                📋 "${nombre}" → escoger:
+            </div>
+            <select data-excel="${nombre}"
+                    style="width:100%; padding:.5rem .7rem; border:1.5px solid #d1d5db;
+                           border-radius:7px; font-size:.9rem; font-family:inherit;">
+                <option value="">— Selecciona una categoría —</option>
+                ${opciones}
+            </select>
+        </div>
+    `).join('');
+
+    document.getElementById('modalCatBody').innerHTML = filas;
+    const modal = document.getElementById('modalCatFaltantes');
+    modal.style.display = 'flex';
+}
+
+async function confirmarMapeosCategorias() {
+    const selects = document.querySelectorAll('#modalCatBody select');
+    const mapeo = {};
+    let incompleto = false;
+
+    selects.forEach(sel => {
+        if (!sel.value) { incompleto = true; return; }
+        mapeo[sel.dataset.excel] = parseInt(sel.value);
+    });
+
+    if (incompleto) {
+        alert('Debes seleccionar una categoría para cada fila antes de continuar.');
+        return;
+    }
+
+    document.getElementById('modalCatFaltantes').style.display = 'none';
+    window._mapeoCategoriasManual = mapeo;
+    await guardarPartidos();
 }
 
 /**

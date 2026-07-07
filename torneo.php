@@ -104,7 +104,75 @@ if (isset($_POST['agregarCategoria'])) {
 }
 
 // ----------------------
-// 3) ELIMINAR TORNEO
+// 3) COPIAR TORNEO
+// ----------------------
+if (isset($_POST['copiarTorneo'])) {
+    $idOrigen = (int)($_POST['idTorneo'] ?? 0);
+    if ($idOrigen > 0) {
+        $conexion->begin_transaction();
+        try {
+            // Obtener nombre original
+            $stmtN = $conexion->prepare("SELECT nombreTorneo FROM torneo WHERE idTorneo = ?");
+            $stmtN->bind_param("i", $idOrigen);
+            $stmtN->execute();
+            $nombreOriginal = $stmtN->get_result()->fetch_assoc()['nombreTorneo'] ?? 'Torneo';
+            $stmtN->close();
+
+            // Insertar nuevo torneo
+            $nuevoNombre = $nombreOriginal . ' - Copia';
+            $stmtT = $conexion->prepare("INSERT INTO torneo (nombreTorneo) VALUES (?)");
+            $stmtT->bind_param("s", $nuevoNombre);
+            $stmtT->execute();
+            $idNuevo = $stmtT->insert_id;
+            $stmtT->close();
+
+            // Copiar categorías y construir mapa old_id → new_id
+            $mapaCategorias = [];
+            $resCat = $conexion->prepare(
+                "SELECT idCategoriaPagoArbitro, nombreCategoria, pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4, tipopago
+                 FROM categoriaPagoArbitro WHERE idTorneo = ?"
+            );
+            $resCat->bind_param("i", $idOrigen);
+            $resCat->execute();
+            $categorias = $resCat->get_result()->fetch_all(MYSQLI_ASSOC);
+            $resCat->close();
+
+            $insCat = $conexion->prepare(
+                "INSERT INTO categoriaPagoArbitro (idTorneo, nombreCategoria, pagoArbitro1, pagoArbitro2, pagoArbitro3, pagoArbitro4, tipopago)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+            foreach ($categorias as $cat) {
+                $insCat->bind_param("isiiiis",
+                    $idNuevo,
+                    $cat['nombreCategoria'],
+                    $cat['pagoArbitro1'],
+                    $cat['pagoArbitro2'],
+                    $cat['pagoArbitro3'],
+                    $cat['pagoArbitro4'],
+                    $cat['tipopago']
+                );
+                $insCat->execute();
+                $mapaCategorias[$cat['idCategoriaPagoArbitro']] = $insCat->insert_id;
+            }
+            $insCat->close();
+
+            $conexion->commit();
+            $_SESSION['mensaje'] = [
+                'tipo'  => 'success',
+                'texto' => "Torneo copiado como '{$nuevoNombre}' con " . count($categorias) . " categoría(s)"
+            ];
+        } catch (Exception $e) {
+            $conexion->rollback();
+            error_log("Error al copiar torneo: " . $e->getMessage());
+            $_SESSION['mensaje'] = ['tipo' => 'error', 'texto' => 'Error al copiar el torneo: ' . $e->getMessage()];
+        }
+    }
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+// ----------------------
+// 4) ELIMINAR TORNEO
 // ----------------------
 if (isset($_POST['eliminarTorneo'])) {
     $id = (int)($_POST['idTorneo'] ?? 0);
@@ -347,7 +415,10 @@ endif;
                 </button>
                 <button type="button" class="btn-categorias" onclick="openCategorias(<?= (int)$t['idTorneo'] ?>)" title="Gestionar Categorías">
                  Categorías
-        </button>
+                </button>
+                <button type="button" class="btn-categorias" onclick="copiarTorneo(<?= (int)$t['idTorneo'] ?>, '<?= h(addslashes($t['nombreTorneo'])) ?>')" title="Copiar torneo completo">
+                    <i class="material-icons">content_copy</i> Copiar
+                </button>
             </td>
         </tr>
         <?php endwhile; ?>
@@ -551,6 +622,18 @@ function openEditarTorneo(id, nombre) {
     document.getElementById('edit_idTorneo').value = id;
     document.getElementById('edit_nombreTorneo').value = nombre.replace(/\\'/g, "'");
     openModal('modalEditarTorneo');
+}
+
+// ========== COPIAR TORNEO ==========
+function copiarTorneo(id, nombre) {
+    if (confirm(`¿Copiar el torneo "${nombre}"?\n\nSe duplicarán las categorías y tarifas. Los partidos NO se copian.\n\nSe creará como "${nombre} - Copia".`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `<input type="hidden" name="idTorneo" value="${id}">
+                          <input type="hidden" name="copiarTorneo" value="1">`;
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 
 // ========== ELIMINAR TORNEO ==========

@@ -1,8 +1,8 @@
 <?php
-$servername = "db-fde-02.apollopanel.com:3306";
-$username = "u136076_tCDay64NMd";
-$password = "oo2qzuwP!MlmTw02fpV6pJS+";
-$dbname = "s136076_Aribatraje";
+$servername = "127.0.0.1:3306";
+$username = "aaa_user";
+$password = "Aaa@Arbitros2026!";
+$dbname = "aaa_arbitros";
 
 $conn = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

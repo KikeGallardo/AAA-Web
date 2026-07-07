@@ -128,7 +128,8 @@ if (isset($_POST['editar_masivo'])) {
 // ------------------------------------
 // 5) PAGINACIÓN + BÚSQUEDA + FILTRO
 // ------------------------------------
-$registrosPorPagina = 10;
+$opcionesPorPagina  = [10, 25, 50, 100];
+$registrosPorPagina = in_array((int)($_GET['por_pagina'] ?? 0), $opcionesPorPagina) ? (int)$_GET['por_pagina'] : 25;
 $pagina = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
 $offset = ($pagina - 1) * $registrosPorPagina;
 
@@ -260,6 +261,13 @@ require_once "assets/footer.php";
 
         <button type="submit">Buscar</button>
 
+        <select name="por_pagina" onchange="this.form.submit()"
+                style="padding:0.6rem 0.75rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.95rem; background:#fff; cursor:pointer;">
+            <?php foreach ($opcionesPorPagina as $op): ?>
+            <option value="<?= $op ?>" <?= $registrosPorPagina === $op ? 'selected' : '' ?>><?= $op ?> por página</option>
+            <?php endforeach; ?>
+        </select>
+
         <?php if ($busqueda !== '' || $filtroCategoria !== ''): ?>
         <a href="arbitros.php" style="padding:0.6rem 1rem; background:#6b7280; color:white; border-radius:6px; text-decoration:none; font-size:0.9rem;">✕ Limpiar</a>
         <?php endif; ?>
@@ -347,20 +355,23 @@ require_once "assets/footer.php";
 <!-- PAGINACIÓN -->
 <?php if ($totalPaginas > 1): ?>
 <div class="paginacion">
+    <?php
+    $qBase = http_build_query(['buscar' => $busqueda, 'categoria' => $filtroCategoria, 'por_pagina' => $registrosPorPagina]);
+    ?>
     <?php if ($pagina > 1): ?>
-        <a href="?pagina=<?= $pagina-1 ?>&buscar=<?= urlencode($busqueda) ?>&categoria=<?= urlencode($filtroCategoria) ?>" class="btn-nav">⬅ Anterior</a>
+        <a href="?pagina=<?= $pagina-1 ?>&<?= $qBase ?>" class="btn-nav">⬅ Anterior</a>
     <?php endif; ?>
 
     <?php
     $start = max(1, $pagina - 2);
     $end   = min($totalPaginas, $pagina + 2);
     for ($i = $start; $i <= $end; $i++): ?>
-        <a href="?pagina=<?= $i ?>&buscar=<?= urlencode($busqueda) ?>&categoria=<?= urlencode($filtroCategoria) ?>"
+        <a href="?pagina=<?= $i ?>&<?= $qBase ?>"
            class="<?= $i==$pagina ? 'active' : '' ?>"><?= $i ?></a>
     <?php endfor; ?>
 
     <?php if ($pagina < $totalPaginas): ?>
-        <a href="?pagina=<?= $pagina+1 ?>&buscar=<?= urlencode($busqueda) ?>&categoria=<?= urlencode($filtroCategoria) ?>" class="btn-nav">Siguiente ➡</a>
+        <a href="?pagina=<?= $pagina+1 ?>&<?= $qBase ?>" class="btn-nav">Siguiente ➡</a>
     <?php endif; ?>
 </div>
 <?php endif; ?>

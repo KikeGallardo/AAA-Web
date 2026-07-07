@@ -73,4 +73,43 @@
 
         <script src="assets/js/xlsx.full.min.js"></script>
         <script src="assets/js/programar.js"></script>
+
+    <!-- MODAL ÁRBITROS NO ENCONTRADOS -->
+    <div id="modalArbFaltantes" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:14px; padding:2rem; width:520px; max-width:95%; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <h3 style="margin:0 0 .4rem; font-size:1.1rem;">⚠️ Árbitros no encontrados</h3>
+            <p style="color:#6b7280; font-size:.85rem; margin-bottom:1.2rem;">Selecciona a cuál árbitro corresponde cada nombre del Excel:</p>
+            <div id="modalArbBody"></div>
+            <div style="display:flex; gap:.75rem; margin-top:1.5rem;">
+                <button onclick="confirmarMapeosArbitros()" style="flex:1; padding:.75rem; background:#1a56db; color:#fff; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;">Guardar con estos árbitros</button>
+                <button onclick="document.getElementById('modalArbFaltantes').style.display='none'" style="flex:1; padding:.75rem; background:#e5e7eb; color:#374151; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ÁRBITROS AMBIGUOS -->
+    <div id="modalArbAmbiguos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:14px; padding:2rem; width:520px; max-width:95%; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <h3 style="margin:0 0 .4rem; font-size:1.1rem;">🔀 Nombres ambiguos</h3>
+            <p style="color:#6b7280; font-size:.85rem; margin-bottom:1.2rem;">Estos nombres coinciden con más de un árbitro. Selecciona cuál corresponde:</p>
+            <div id="modalArbAmbiguosBody"></div>
+            <div style="display:flex; gap:.75rem; margin-top:1.5rem;">
+                <button onclick="confirmarMapeosAmbiguos()" style="flex:1; padding:.75rem; background:#1a56db; color:#fff; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;">Continuar</button>
+                <button onclick="document.getElementById('modalArbAmbiguos').style.display='none'" style="flex:1; padding:.75rem; background:#e5e7eb; color:#374151; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CATEGORÍAS NO ENCONTRADAS -->
+    <div id="modalCatFaltantes" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:14px; padding:2rem; width:520px; max-width:95%; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <h3 style="margin:0 0 .4rem; font-size:1.1rem;">⚠️ Categorías no encontradas</h3>
+            <p style="color:#6b7280; font-size:.85rem; margin-bottom:1.2rem;">Selecciona a cuál categoría corresponde cada una del Excel:</p>
+            <div id="modalCatBody"></div>
+            <div style="display:flex; gap:.75rem; margin-top:1.5rem;">
+                <button onclick="confirmarMapeosCategorias()" style="flex:1; padding:.75rem; background:#1a56db; color:#fff; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;">Guardar con estas categorías</button>
+                <button onclick="document.getElementById('modalCatFaltantes').style.display='none'" style="flex:1; padding:.75rem; background:#e5e7eb; color:#374151; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
     </main>

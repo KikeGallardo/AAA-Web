@@ -5,11 +5,11 @@ require_once 'error_handler.php';
 // o protégelo con .htaccess
 
 // Configuración de base de datos
-define('DB_HOST', 'db-fde-02.apollopanel.com');
+define('DB_HOST', '127.0.0.1');
 define('DB_PORT', '3306');
-define('DB_USER', 'u136076_tCDay64NMd');
-define('DB_PASS', 'oo2qzuwP!MlmTw02fpV6pJS+');
-define('DB_NAME', 's136076_Aribatraje');
+define('DB_USER', 'aaa_user');
+define('DB_PASS', 'Aaa@Arbitros2026!');
+define('DB_NAME', 'aaa_arbitros');
 
 // Configuración de sesión
 define('SESSION_TIMEOUT', 3600); // 1 hora
@@ -29,7 +29,7 @@ function getDBConnection() {
         die("Error de conexión a la base de datos. Contacte al administrador.");
     }
     
-    // $conexion->set_charset("utf8mb4");
+    $conexion->set_charset("utf8mb4");
     return $conexion;
 }
 

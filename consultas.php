@@ -1,6 +1,13 @@
 <?php
+ini_set('display_errors', 0);
+error_reporting(0);
 header("Content-Type: application/json");
 include "basedatos.php";
+
+if ($conn->connect_error) {
+    echo json_encode(['error' => 'db_connect', 'msg' => $conn->connect_error]);
+    exit;
+}
 
 $accion = $_POST['accion'] ?? '';
 
@@ -440,7 +447,7 @@ switch ($accion) {
         $idPartido
     );
     if ($stmt->execute()) {
-        $r = $conn->query("
+        $stmtN = $conn->prepare("
             SELECT
                 e1.nombreEquipo eq1, e2.nombreEquipo eq2,
                 CONCAT(COALESCE(a1.nombre,''),' ',COALESCE(a1.apellido,'')) n1,
@@ -454,8 +461,11 @@ switch ($accion) {
             LEFT JOIN arbitro a2 ON p.idArbitro2 = a2.idArbitro
             LEFT JOIN arbitro a3 ON p.idArbitro3 = a3.idArbitro
             LEFT JOIN arbitro a4 ON p.idArbitro4 = a4.idArbitro
-            WHERE p.idPartido = $idPartido
+            WHERE p.idPartido = ?
         ");
+        $stmtN->bind_param('i', $idPartido);
+        $stmtN->execute();
+        $r = $stmtN->get_result();
         $nombres = $r ? $r->fetch_assoc() : [];
         echo json_encode(['status'=>'ok', 'nombres'=>$nombres]);
     } else {
@@ -484,6 +494,7 @@ switch ($accion) {
     break;
 
     case 'buscar_arbitros_programados':
+    try {
     $fechaInicio = $_POST['fechaInicio'] ?? '';
     $fechaFin    = $_POST['fechaFin']    ?? '';
     $torneos     = $_POST['torneos']     ?? [];
@@ -498,10 +509,13 @@ switch ($accion) {
     $extraValues = [];
 
     if (!empty($torneos)) {
-        $placeholders = implode(',', array_fill(0, count($torneos), '?'));
-        $whereTorneo  = "AND p.idTorneoPartido IN ($placeholders)";
-        $extraTypes   = str_repeat('i', count($torneos));
-        $extraValues  = array_map('intval', $torneos);
+        $placeholders    = implode(',', array_fill(0, count($torneos), '?'));
+        $whereTorneo     = "AND p.idTorneoPartido IN ($placeholders)";
+        $whereTorneoPlain = "AND idTorneoPartido IN ($placeholders)";
+        $extraTypes      = str_repeat('i', count($torneos));
+        $extraValues     = array_map('intval', $torneos);
+    } else {
+        $whereTorneoPlain = '';
     }
 
     $sql = "
@@ -510,16 +524,17 @@ switch ($accion) {
             a.nombre,
             a.apellido,
             a.cedula,
-            COUNT(DISTINCT p.idPartido) AS totalPartidos
+            COUNT(DISTINCT p.idPartido) AS totalPartidos,
+            MAX(p.es_central)           AS esCentral
         FROM arbitro a
         INNER JOIN (
-            SELECT idPartido, idArbitro1 AS idArbitro, idTorneoPartido, fecha FROM partido
+            SELECT idPartido, idArbitro1 AS idArbitro, idTorneoPartido, fecha, 1 AS es_central FROM partido WHERE idArbitro1 IS NOT NULL
             UNION ALL
-            SELECT idPartido, idArbitro2, idTorneoPartido, fecha FROM partido WHERE idArbitro2 IS NOT NULL
+            SELECT idPartido, idArbitro2, idTorneoPartido, fecha, 0 AS es_central FROM partido WHERE idArbitro2 IS NOT NULL
             UNION ALL
-            SELECT idPartido, idArbitro3, idTorneoPartido, fecha FROM partido WHERE idArbitro3 IS NOT NULL
+            SELECT idPartido, idArbitro3, idTorneoPartido, fecha, 0 AS es_central FROM partido WHERE idArbitro3 IS NOT NULL
             UNION ALL
-            SELECT idPartido, idArbitro4, idTorneoPartido, fecha FROM partido WHERE idArbitro4 IS NOT NULL
+            SELECT idPartido, idArbitro4, idTorneoPartido, fecha, 0 AS es_central FROM partido WHERE idArbitro4 IS NOT NULL
         ) p ON p.idArbitro = a.idArbitro
         WHERE p.fecha BETWEEN ? AND ?
         $whereTorneo
@@ -541,6 +556,14 @@ switch ($accion) {
     }
     $stmt->close();
 
+    // Total de partidos en el rango
+    $sqlTotal  = "SELECT COUNT(*) AS total FROM partido WHERE fecha BETWEEN ? AND ? $whereTorneoPlain";
+    $stmtTot   = $conn->prepare($sqlTotal);
+    $stmtTot->bind_param($types, ...$params);
+    $stmtTot->execute();
+    $totalPartidos = (int)$stmtTot->get_result()->fetch_assoc()['total'];
+    $stmtTot->close();
+
     $torneos_nombre = '';
     if (!empty($torneos)) {
         $phs   = implode(',', array_fill(0, count($torneos), '?'));
@@ -558,8 +581,12 @@ switch ($accion) {
 
     echo json_encode([
         'arbitros'       => $arbitros,
-        'torneos_nombre' => $torneos_nombre
+        'torneos_nombre' => $torneos_nombre,
+        'total_partidos' => $totalPartidos
     ]);
+    } catch (Throwable $e) {
+        echo json_encode(['error' => $e->getMessage(), 'arbitros' => [], 'total_partidos' => 0, 'torneos_nombre' => '']);
+    }
     break;
 
     case 'registrar_impresion':

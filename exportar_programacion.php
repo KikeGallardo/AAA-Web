@@ -47,11 +47,15 @@ $sql = "
         p.categoriaText                                     AS categoria,
         DATE_FORMAT(p.hora, '%h:%i %p')                    AS hora,
         p.canchaLugar                                       AS cancha,
-        CONCAT(a1.nombre, ' ', a1.apellido)                AS central,
-        CONCAT(a2.nombre, ' ', a2.apellido)                AS linea1,
-        CONCAT(a3.nombre, ' ', a3.apellido)                AS linea2
+        e1.nombreEquipo                                     AS equipo1,
+        e2.nombreEquipo                                     AS equipo2,
+        CONCAT(COALESCE(a1.nombre,''), ' ', COALESCE(a1.apellido,'')) AS central,
+        CONCAT(COALESCE(a2.nombre,''), ' ', COALESCE(a2.apellido,'')) AS linea1,
+        CONCAT(COALESCE(a3.nombre,''), ' ', COALESCE(a3.apellido,'')) AS linea2
     FROM partido p
     INNER JOIN torneo t   ON t.idTorneo   = p.idTorneoPartido
+    LEFT  JOIN equipo e1  ON e1.idEquipo  = p.idEquipo1
+    LEFT  JOIN equipo e2  ON e2.idEquipo  = p.idEquipo2
     LEFT  JOIN arbitro a1 ON a1.idArbitro = p.idArbitro1
     LEFT  JOIN arbitro a2 ON a2.idArbitro = p.idArbitro2
     LEFT  JOIN arbitro a3 ON a3.idArbitro = p.idArbitro3
@@ -120,6 +124,8 @@ echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
       <Column ss:Width="120"/>
       <Column ss:Width="75"/>
       <Column ss:Width="210"/>
+      <Column ss:Width="160"/>
+      <Column ss:Width="160"/>
       <Column ss:Width="145"/>
       <Column ss:Width="145"/>
       <Column ss:Width="145"/>
@@ -128,6 +134,8 @@ echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
         <Cell ss:StyleID="header"><Data ss:Type="String">Categoria</Data></Cell>
         <Cell ss:StyleID="header"><Data ss:Type="String">Hora</Data></Cell>
         <Cell ss:StyleID="header"><Data ss:Type="String">Cancha</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">Equipo A</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">Equipo B</Data></Cell>
         <Cell ss:StyleID="header"><Data ss:Type="String">Central</Data></Cell>
         <Cell ss:StyleID="header"><Data ss:Type="String">Linea 1</Data></Cell>
         <Cell ss:StyleID="header"><Data ss:Type="String">Linea 2</Data></Cell>
@@ -147,7 +155,7 @@ foreach ($rows as $r) {
                      . ' DE ' . date('Y', $ts);
 
         echo "      <Row ss:Height=\"18\">\n";
-        echo "        <Cell ss:StyleID=\"dateRow\" ss:MergeAcross=\"6\">"
+        echo "        <Cell ss:StyleID=\"dateRow\" ss:MergeAcross=\"8\">"
            . "<Data ss:Type=\"String\">" . xmlEsc($label) . "</Data></Cell>\n";
         echo "      </Row>\n";
 
@@ -170,6 +178,8 @@ foreach ($rows as $r) {
     echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($r['categoria']) . "</Data></Cell>\n";
     echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($r['hora'])      . "</Data></Cell>\n";
     echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($r['cancha'])    . "</Data></Cell>\n";
+    echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($r['equipo1'] ?? '') . "</Data></Cell>\n";
+    echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($r['equipo2'] ?? '') . "</Data></Cell>\n";
     echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($central)        . "</Data></Cell>\n";
     echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($linea1)         . "</Data></Cell>\n";
     echo "        <Cell ss:StyleID=\"{$style}\"><Data ss:Type=\"String\">" . xmlEsc($linea2)         . "</Data></Cell>\n";

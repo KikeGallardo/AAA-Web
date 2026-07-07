@@ -323,6 +323,28 @@ require_once "assets/header.php";
         }
         .btn-descargar i { font-size: 1rem; }
 
+        /* ── RESUMEN DE PARTIDOS ── */
+        .resumen-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .45rem 1rem;
+            border-radius: 99px;
+            font-size: .88rem;
+            font-weight: 600;
+            font-family: 'DM Mono', monospace;
+        }
+        .stat-chip.partidos  { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        .stat-chip.total     { background: #e8f0fe; color: #1a56db; border: 1px solid #90caf9; }
+        .stat-chip.centrales { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+        .stat-chip.asistentes{ background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -683,6 +705,9 @@ function renderResultados(data, fi, ff) {
     const sel         = document.getElementById('torneosSelect');
     const torneosIds  = Array.from(sel.selectedOptions).map(o => o.value);
 
+    const totalPartidos = data.total_partidos ?? 0;
+    const centrales     = data.arbitros.filter(a => parseInt(a.esCentral) === 1).length;
+
     let html = `
         <div class="results-header">
             <h3>Árbitros programados</h3>
@@ -692,6 +717,10 @@ function renderResultados(data, fi, ff) {
             <i class="material-icons">date_range</i>
             Del <strong>${fmtDate(fi)}</strong> al <strong>${fmtDate(ff)}</strong>
             ${data.torneos_nombre ? ' · ' + data.torneos_nombre : ''}
+        </div>
+        <div class="resumen-stats">
+            <span class="stat-chip partidos">⚽ ${totalPartidos} partido${totalPartidos !== 1 ? 's' : ''}</span>
+            <span class="stat-chip total">👥 ${data.arbitros.length} árbitro${data.arbitros.length !== 1 ? 's' : ''}</span>
         </div>
         <table class="arbitros-table">
             <thead>
@@ -765,7 +794,7 @@ function onDescargar(e, idArbitro, fi, ff, url) {
     // Dejamos que el href abra la pestaña normalmente.
     // Después de un pequeño delay recargamos el contador en este panel.
     setTimeout(() => actualizarBadge(idArbitro), 1500);
-    fd = new FormData();
+    const fd = new FormData();
     fd.append('accion', 'ajustar_contador');
     fd.append('idArbitro', idArbitro);
     fd.append('nuevo', (estado[idArbitro]?.total ?? 0) + 1);
